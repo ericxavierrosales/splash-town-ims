@@ -3,6 +3,7 @@ const url  = require('url')
 const path = require('path')
 
 require ('update-electron-app')({
+  repo: 'ericxavierrosales/splash-town-ims',
   updateInterval: '5 minutes'
 })
 
@@ -12,7 +13,7 @@ if (require('electron-squirrel-startup')) { // eslint-disable-line global-requir
 }
 
 // Set environment to PRD
-// process.env.NODE_ENV = 'production'
+process.env.NODE_ENV = 'production'
 app.setAppUserModelId("com.electron.splash-town-pos-ims")
 
 // Keep a global reference of the window object, if you don't, the window will

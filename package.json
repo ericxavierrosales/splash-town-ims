@@ -1,7 +1,7 @@
 {
   "name": "splash-town-ims",
   "productName": "Splash Town POS & IMS",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "A POS and Inventory Management System for Splash Town Waterpark & Resort store",
   "main": "src/main.js",
   "build": {
