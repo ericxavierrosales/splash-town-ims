@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="../node_modules/bootstrap/dist/css/bootstrap.min.css" crossorigin="anonymous">
+    <link rel="stylesheet" href="./css/splashtown.css">
+    <link rel="stylesheet" href="../node_modules/js-datepicker/dist/datepicker.min.css">
+
+    <!-- Bootstrap JS -->
+    <script>
+      window.$ = window.jQuery = require('../node_modules/jquery/dist/jquery.min.js');
+    </script>
+    <script src="https://kit.fontawesome.com/2d28d70909.js" crossorigin="anonymous"></script>
+    <script src="../node_modules/popper.js/dist/umd/popper.min.js" crossorigin="anonymous"></script>
+    <script src="../node_modules/bootstrap/dist/js/bootstrap.min.js" crossorigin="anonymous"></script>
+
+    <title>USER LOGIN</title>
+</head>
+
+<body>
+    <div class="container-fluid">
+        <h3 class='page-header'>User Login</h3>
+        <form id='login-form'>
+            <div class='row'>
+                <div class='col-lg form-group'>
+                    <label for='login-username'>Username</label>
+                    <input type='text' id='login-username' class='form-control' placeholder='Enter username' autofocus required />
+
+                    <label for='login-password'>Password</label>
+                    <input type='password' id='login-password' class='form-control' placeholder='Enter password' required />
+
+                    <br>
+                    <input type='submit' class='btn btn-success form-control' id='login-btn' value='Login' />
+                </div>
+            </div>
+        </form>
+    </div>
+    
+    <script src='./js/login.js'></script>
+</body>
+</html>

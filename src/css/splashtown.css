@@ -1,0 +1,138 @@
+body {
+    padding: 2.5%;
+}
+
+.col-md {
+    padding: 1%;
+}
+
+#add-form label, #sales-form label, #filter-txn-form label, #myaccount-form label, #add-user-form label {
+    font-size: 16px;
+}
+
+#add-form input, #add-form button, #search-prod-btn, #clear-btn,
+#sales-form-add input, #sales-form-add button, #sales-form-add select,
+#sales-form input, #sales-form button, #sales-form select, #sales-search-btn, 
+#filter-txn-form .form-control, #myaccount-form .form-control, #add-user-form .form-control, 
+#submit-btn, .view-details-btn, .date-btn, #print-receipt-btn, .category-btn,
+.restock-btn, .edit-item-btn, .save-changes-btn, .cancel-changes-btn,
+.inventory-toolbar button {
+    font-size: 14px;
+    line-height: 16px;
+}
+
+#sr-product-filter-form .form-control {
+    font-size: 12px;
+    line-height: 14px;  
+}
+
+#my-account-btn {
+    border: 1.5px solid #666;
+    border-radius: 50%;
+    padding: 5%;
+    width: 48px;
+    height: 48px;
+}
+
+.prod-search-bar {
+    font-size: 14px;
+    line-height: 16px;
+    font-family: FontAwesome, sans-serif;
+    font-style: normal;
+    font-weight: normal;
+    text-decoration: inherit;
+}
+
+#sales-search-bar {
+    position: relative;
+}
+
+#sales-search-input {
+    text-align: right;
+    border: 1px solid #bbb;
+}
+
+.form-control[disabled] {
+    background-color: white;
+    border: 0;
+}
+
+select[disabled] {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    text-indent: 0.01px;
+    text-overflow: '';
+}
+
+.restock-btn, .edit-item-btn, .save-changes-btn, .cancel-changes-btn, .stock-ledger-btn, .category-btn {
+    margin: 0.5%;
+}
+
+.table-container-md {
+    min-height: 30vh;
+    max-height: 42.5vh;
+    overflow: auto;
+}
+
+.table-container-lg-nomin {
+    height: 60vh;
+    overflow: auto;
+}
+ 
+.table-container-lg {
+    min-height: 55vh;
+    max-height: 60vh;
+    overflow: auto;
+}
+
+.item-box {
+    height: 160px;
+    width: 160px;
+    margin: 0.5%;
+    border: 1px solid #ddd;
+    border-radius: 5%;
+    padding: 1%;
+}
+
+.item-price {
+    font-size: 17px;
+}
+
+.table thead th{
+    font-size: 16px;
+    position: sticky;
+    top: 0;
+}
+
+.table-tbody td, .table-tbody .form-control, .table-tfoot td {
+    font-size: 14px;
+}
+
+.dropdown-menu {
+    width: 90%;
+    font-size: 13px;
+}
+
+.sort-arrow {
+    color: white;
+}
+
+.sort-arrow:hover {
+    color: #bbb;
+    text-decoration: none;
+}
+
+
+/* scroll bar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+::-webkit-scrollbar-track {
+    -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.3);
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb {
+    border-radius: 3.75px;
+    background-color: darkgrey;
+    outline: 1px solid slategrey;
+}

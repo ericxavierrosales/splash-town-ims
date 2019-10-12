@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="../node_modules/bootstrap/dist/css/bootstrap.min.css" crossorigin="anonymous">
+    <link rel="stylesheet" href="./css/splashtown.css">
+    <link rel="stylesheet" href="../node_modules/js-datepicker/dist/datepicker.min.css">
+    <link rel="stylesheet" href="../node_modules/@fortawesome/fontawesome-free/css/fontawesome.min.css">
+    <link rel="stylesheet" href="../node_modules/@fortawesome/fontawesome-free/css/solid.css">
+
+    <!-- Bootstrap JS -->
+    <script>
+      window.$ = window.jQuery = require('../node_modules/jquery/dist/jquery.min.js');
+    </script>
+    <script src="../node_modules/@fortawesome/fontawesome-free/js/fontawesome.min.js" crossorigin="anonymous"></script>
+    <script src="../node_modules/popper.js/dist/umd/popper.min.js" crossorigin="anonymous"></script>
+    <script src="../node_modules/bootstrap/dist/js/bootstrap.min.js" crossorigin="anonymous"></script>
+
+    <title>Splash Town Inventory System</title>
+  </head>
+
+  <body>
+    <div class='container-fluid'>
+      <div class='row'>
+        <div class='col-11'>
+          <h3 class='page-header'><span data-bind="text:pageTitle"></span> <small>POS & Inventory System</small></h3>
+        </div>
+        <div class='col-1' data-bind='if:currentUser()!=null' style='text-align:right'>
+          <button class='btn btn-light' id='my-account-btn' data-bind='click:triggerMyAccountTab'>
+            <h4><i class='fas fa-user'></i></h4>
+          </button>
+        </div>
+      </div>
+      <nav data-bind='visible:currentUser()!=null&&currentUser().RoleId()!=2'>
+        <div class="nav nav-tabs" id="nav-tab" role="tablist">
+          <a class="nav-item nav-link active" id="nav-sales-tab" data-toggle="tab" href="#nav-sales" role="tab" aria-controls="nav-sales" aria-selected="true">
+            <i class='fas fa-cash-register'></i> &nbsp; POS
+          </a>
+          <a class="nav-item nav-link" id="nav-add-tab" data-toggle="tab" href="#nav-add" role="tab" aria-controls="nav-add" aria-selected="false">
+            <i class='fas fa-clipboard-list'></i> &nbsp; Inventory
+          </a>
+          <a class='nav-item nav-link' id='nav-stock-ledger-tab' data-toggle='tab' href='#nav-stock-ledger' role='tab' aria-controls='nav-stock-ledger' aria-selected='false'>
+            <i class='fas fa-copy'></i> &nbsp; Stock Ledger
+          </a>
+          <a class="nav-item nav-link" id="nav-txns-tab" data-toggle="tab" href="#nav-txns" role="tab" aria-controls="nav-txns" aria-selected="false">
+            <i class='fas fa-file-invoice-dollar'></i> &nbsp; Transactions
+          </a>
+          <a class='nav-item nav-link' id='nav-sales-records-tab' data-toggle='tab' href='#nav-sales-records' role='tab' aria-controls='nav-sales-records' aria-selected='false'>
+            <i class='fas fa-search-dollar'></i> &nbsp; Sales Records
+          </a>
+          <a class="nav-item nav-link" id="nav-users-tab" data-toggle="tab" href="#nav-users" role="tab" aria-controls="nav-users" aria-selected="false" data-bind='if:currentUser()!=null&&currentUser().RoleId()==1'>
+            <i class='fas fa-users'></i> &nbsp; Users
+          </a>
+          <a class='nav-item nav-link' id='nav-myaccount-tab' data-toggle='tab' href='#nav-myaccount' role='tab' aria-controls='nav-myaccount' aria-selected='false' data-bind='visible:false'>
+            My Account
+          </a>
+        </div>
+      </nav>
+
+
+      <div class="tab-content" id="nav-tabContent">
+        <!-- POS TAB -->
+        <div class="tab-pane fade show active" id="nav-sales" role="tabpanel" aria-labelledby="nav-sales-tab">
+          <div class='row' style='padding-top:1%'>
+            <!-- Product table column -->
+            <div class='col-lg-7 form-group'>
+              <input type='hidden' id='sales-prod-id' value=0 />
+              <input type='hidden' id='selected-category' value=0 />
+              <input type='button' id='select-category-trigger-btn' style='display:none' />
+              <!-- Search and Categories -->
+              <div class='row'>
+                <div class='col-sm-6'></div>
+                <div class='col-sm-6 form-group'>
+                  <form id='sales-search-form'>
+                  <div class="input-group mb-3 dropdown" id='sales-search-bar'>
+                    <input type='text' id='sales-search-input' class='prod-search-bar form-control dropdown-toggle' placeholder='Search products' />
+                    <div class="input-group-append">
+                      <button class="btn btn-outline-secondary" type="submit" id="sales-search-btn">
+                        <i class='fas fa-search'></i>
+                      </button>
+                    </div>
+                    <div class="dropdown-menu" id='autocomplete-dd' aria-labelledby="sales-search-input" data-bind='foreach:filterProductsDynamic'>
+                      <a class="dropdown-item" href="#" data-bind='text:ProdName(), click:selectSalesRow'></a>
+                    </div>
+                  </div>
+                  </form>
+                </div>
+              </div>
+              <nav>
+                <div class='nav nav-pills nav-justified' id='sort-product-tab' role='tablist' data-bind='foreach:categories'>
+                  <button class='btn btn-outline-info category-btn nav-item' data-bind='attr:{id:"nav-cat-tab-"+RowId()}, click:filterCategories'>
+                    <i data-bind='attr:{class:Icon()}'></i> &nbsp; <span data-bind='text:Name()'></span>
+                  </button>
+                </div>
+              </nav>
+
+              <!-- ITEMS LIST -->
+              <div class='table-container-lg-nomin d-flex align-content-start flex-wrap' style='border-top: 1px solid #ddd' data-bind='foreach:filterSaleProducts'>
+                <button class='item-box d-flex flex-column btn btn-info' data-bind='click:selectSalesRow'>
+                  <div class='mb-auto' style='text-align: left'>
+                    <h6 data-bind='text:ProdName()'></h6>
+                  </div>
+                  <div class='align-items-baseline'>
+                    <span class='item-price' data-bind='text:"P"+parseFloat(ProdPrice()).toFixed(2)'></span>
+                  </div>
+                </button>
+
+                <!--
+                <table class='table sales-item-table table-hover'>
+                  <thead class='thead-dark'>
+                    <tr>
+                      <th>Product #</th>
+                      <th>Product Description</th>
+                      <th>Available Qty</th>
+                      <th>Unit Price</th>
+                    </tr>
+                  </thead>
+                  <tbody id='sales-item-table-tbody' class='table-tbody' data-bind='foreach: filterSaleProducts'>
+                    <tr data-bind="attr:{id:'table-row-'+RowId()}, click:selectSalesRow">
+                      <td data-bind='text:ProdNum()'></td>
+                      <td data-bind='text:ProdName()'></td>
+                      <td data-bind='text:ProdQty()'></td>
+                      <td data-bind='text:parseFloat(ProdPrice()).toFixed(2)'></td>
+                    </tr>
+                  </tbody>
+                </table>
+                -->
+
+              </div>
+            </div>
+            <!-- Sales column -->
+            <div class='col-lg-5 d-flex flex-column' style='border-left: 1px solid #ddd; padding-bottom: 0.5%'>
+              <h5>Sales</h5>
+              <div class='table-container-lg mb-auto'>
+                <table class='table sales-table'>
+                  <thead class='thead-dark'>
+                      <tr>
+                        <th>Product</th>
+                        <th>Qty</th>
+                        <th>Sale Price</th>
+                      </tr>
+                  </thead>
+                  <tbody id='sales-table-tbody' class='table-tbody' data-bind='foreach:sales'>
+                      <tr>
+                        <td data-bind='text:ProdName()'></td>
+                        <td data-bind='text:SaleQty()'></td>
+                        <td data-bind='text:SalePrice().toFixed(2)'></td>
+                      </tr>
+                  </tbody>
+                </table>
+              </div>
+                 
+              <div class='align-items-baseline row' style='border-top:1px solid #ddd'>
+                <div class='col-sm-8' style='text-align:right;font-size:17px; font-weight:bold'>
+                  Total Sales<br>
+                  Amount Tendered
+                </div>
+                <div class='col-sm-4' style='font-size:17px; font-weight:bold'>
+                  <span data-bind='text:totalSalesPrice().toFixed(2)'></span><br>
+                  <span data-bind='text:amountTendered().toFixed(2)'></span>
+                </div>
+              </div> 
+              <div class='align-items-baseline row'>
+                <div class='col-sm-8' style='text-align:right'>
+                  Change
+                </div>
+                <div class='col-sm-4'>
+                  <span data-bind='text:changeGiven().toFixed(2)'></span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class='row' style='padding-top: 1%'>
+            <div class='col-lg-7'>
+            </div>
+            <div class='col-lg-5 form-group' style='text-align: right'>
+              <form id='sales-form'>
+                <button type='submit' class='btn btn-success form-control' id='sales-submit-btn' data-bind='visible:!isProcessing()'>
+                  <i class='fas fa-dollar-sign'></i> &nbsp; Process Sale
+                </button>
+                <button type='button' class='btn btn-success form-control' id='print-receipt-btn' data-bind='visible:isProcessing(), click:printReceipt'>
+                  <i class='fas fa-print'></i> &nbsp; Print Receipt
+                </button>
+              </form>
+            </div>
+          </div>
+
+          <!-- Amount Tendered Modal -->
+          <div class='modal fade' id='amt-tender-modal'>
+            <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+              <div class="modal-content">
+                <div class="modal-header" style='padding:1%'>
+                  <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                  </button>
+                </div>
+                <div class="modal-body">
+                  <form id='amt-tender-form'>
+                    <div class='row'>
+                      <div class='col-md form-group' style='padding: 0% 5%'>
+                        <label for='sales-tender-amt'>Amount Tendered</label>
+                        <input type='text' id='sales-tender-amt' class='form-control' placeholder='0' required/>
+                        
+                        <br>
+                        <input type='submit' id='enter-amt-btn' class='form-control btn btn-success' value='OK' />
+                      </div>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Add Sale Quantity Modal -->
+          <div class='modal fade' id='sale-qty-modal'>
+            <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+              <div class="modal-content">
+                <div class="modal-header" style='padding:1%'>
+                  <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                  </button>
+                </div>
+                <div class="modal-body">
+                  <form id='sales-form-add'>
+                    <div class='row'>
+                      <div class='col-md form-group' style='padding: 0% 5%'>
+                          <label for='sales-prod-qty'>Quantity Sold</label>
+                          <input type='number' id='sales-prod-qty' class='form-control' placeholder='Enter Quantity sold' />
+                        
+                        <br>
+                        <input type='submit' class='btn btn-success form-control' id='sales-add-btn' value='Add' />
+                      </div>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- INVENTORY TAB -->
+        <div class="tab-pane fade" id="nav-add" role="tabpanel" aria-labelledby="nav-add-tab" data-bind='visible:currentUser()!=null&&currentUser().RoleId()!=2'>
+            <!-- Add Product Modal -->
+            <div class='modal fade' id='add-form-modal'>
+              <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title" id="add-form-modal-label">Add New Product</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                      <span aria-hidden="true">&times;</span>
+                    </button>
+                  </div>
+                  <div class="modal-body" style='padding: 5%'>
+                    <form id='add-form'>
+                      <div class='row'>
+                        <div class='col-md form-group'>
+                          <label for='prod-category'>Category</label>
+                          <select id='prod-category' class='form-control' data-bind='foreach:createCategories'>
+                              <option data-bind='value:RowId(), text:Name(), visible:RowId()!=0'></option>
+                          </select>
+
+                          <label for='prod-num'>Product Number</label>
+                          <input type='text' id='prod-num' class='form-control' placeholder='Enter Product Number' required/>
+                          
+                          <label for='prod-name'>Product Name</label>
+                          <input type='text' id='prod-name' class='form-control' placeholder='Enter Product Name' required/>
+
+                          <label for='prod-qty'>Quantity</label>
+                          <input type='number' id='prod-qty' class='form-control' placeholder='Enter Quantity' min=0 required/>
+                          
+                          <label for='prod-price'>Unit Price</label>
+                          <input type='number' id='prod-price' class='form-control' step='0.01' placeholder='Enter Price of a single unit' min=0 required/>
+                        </div>
+                      </div>
+                      <div class='row'>
+                        <div class='col-md form-group' style='text-align: right'>
+                          <!--
+                          <button type='button' class='btn btn-success' id='trunc-btn' data-bind='click:truncateTable'>Truncate Table</button>
+                          -->
+                          <input type='submit' class='btn btn-success' id='submit-btn' value='Add Item' />
+                        </div>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- Restock Modal -->
+            <div class='modal fade' id='restock-modal'>
+              <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+                <div class="modal-content">
+                  <div class="modal-header" style='padding:1%'>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                      <span aria-hidden="true">&times;</span>
+                    </button>
+                  </div>
+                  <div class="modal-body">
+                    <form id='restock-form'>
+                      <div class='row'>
+                        <div class='col-md form-group' style='padding: 0% 5%'>
+                            <input type='hidden' id='restock-row-id' value=0 />
+
+                            <label for='restock-qty'>Incoming Stock Quantity</label>
+                            <input type='number' id='restock-qty' class='form-control' placeholder='Enter qty' />
+                          <br>
+                          <input type='submit' class='btn btn-success form-control' id='restock-save-btn' value='OK' />
+                        </div>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Search Product Form -->
+            <form id='search-form'>
+              <div class='row' style='padding-top: 1.5%'>
+                <div class='col-3 inventory-toolbar'>
+                  <button type='button' class='btn btn-dark' data-toggle='modal' data-target='#add-form-modal' aria-expanded="false" aria-controls='add-form-modal'>
+                      <i class='fas fa-plus'></i> &nbsp; Add New Item
+                  </button>
+                  <button type='button' class='btn btn-dark' data-bind='click:uploadInventoryFile'>
+                      <i class='fas fa-upload'></i> &nbsp; Import File
+                  </button>
+                </div>
+                <div class='col-9 form-group'>
+                  <div class="input-group mb-3">
+                    <input type='text' class='form-control prod-search-bar' id='prod-search-bar' placeholder="Search in Products Table" />
+                    <div class="input-group-append">
+                      <button class="btn btn-success" type="submit" id="search-prod-btn">
+                        <i class='fas fa-search'></i> &nbsp; Search
+                      </button>
+                      <button class='btn btn-secondary' type='button' id='clear-btn' data-bind='click: clearSearch'>
+                        <i class='fas fa-eraser'></i> &nbsp; Clear
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </form>
+
+            <!-- Inventory Table -->
+            <div class='row table-container-lg'>
+              <table class='table item-table'>
+                <thead class='thead-dark'>
+                  <tr>
+                    <th>Product #</th>
+                    <th>Category</th>
+                    <th>Product Description</th>
+                    <th>Unit Price</th>
+                    <th>Available Qty</th>
+                    <th style='text-align: center' width=20%>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id='item-table-tbody' class='table-tbody' data-bind='foreach:filterProducts'>
+                  <tr data-bind="attr: {id:'table-row-'+RowId()}">
+                    <td data-bind='text:ProdNum()'></td>
+                    <td>
+                      <select class='form-control' data-bind='attr:{id:"pcat-"+RowId()}, value:Category(), enable:IsEnabled()'>
+                        <option value=1>Food</option>
+                        <option value=2>Beverages</option>
+                        <option value=3>Apparel</option>
+                        <option value=4>Personal</option>
+                        <option value=99>Misc</option>
+                      </select>
+                    </td>
+                    <td>
+                      <input type='text' class='form-control' data-bind='attr:{value:ProdName(), id:"pname-"+RowId()}, enable:IsEnabled()' />
+                    </td>
+                    <td>
+                      <input type='text' class='form-control' data-bind='attr:{value:parseFloat(ProdPrice()).toFixed(2), id:"pprice-"+RowId()}, enable:IsEnabled()' />
+                    </td>
+                    <td data-bind='text:ProdQty()'></td>
+                    <td width=15% style='text-align: center'>
+                      <button type='button' class='btn btn-dark edit-item-btn' data-bind='click:editRow, visible:!IsEnabled() && !IsRestock()'>Edit</button>
+                      <button type='button' class='btn btn-dark save-changes-btn' data-bind='click:saveEdit, visible:IsEnabled()'>Save</button>
+                      <button type='button' class='btn btn-dark restock-btn' data-bind='click:restockRow, visible:!IsEnabled() && !IsRestock()'>Restock</button>
+                      <button type='button' class='btn btn-dark cancel-changes-btn' data-bind='click:cancelAction, visible:IsEnabled() || IsRestock()'>Cancel</button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+        </div>
+        <!-- TRANSACTIONS TAB -->
+        <div class="tab-pane fade" id="nav-txns" role="tabpanel" aria-labelledby="nav-txns-tab" data-bind='visible:currentUser()!=null&&currentUser().RoleId()!=2'>
+          <form id='filter-txn-form'>
+            <div class='row' style='padding-top: 1%'>
+              <div class='col-md-2 form-group'>
+              </div>
+              <div class='col-md-8 form-group'>
+                <label for='txn-filter-type'>Filter by: </label>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input" type="radio" name="filterTypeOptions" id="filterType1" value="invoice" checked />
+                  <label class="form-check-label" for="filterType1">Invoice Number</label>
+                </div>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input" type="radio" name="filterTypeOptions" id="filterType2" value="tdate" />
+                  <label class="form-check-label" for="filterType2">Transaction Date</label>
+                </div>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input" type="radio" name="filterTypeOptions" id="filterType4" value="curmonth" />
+                  <label class="form-check-label" for="filterType4">This Month</label>
+                </div>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input" type="radio" name="filterTypeOptions" id="filterType5" value="curweek" />
+                  <label class="form-check-label" for="filterType5">This Week</label>
+                </div><br>
+
+                <label for='txn-invoice-num' data-bind='visible:txnFilterType()=="invoice"'>Invoice #</label>
+                <input type='text' id='txn-invoice-num' class='form-control' placeholder='Enter invoice number' data-bind='visible:txnFilterType()=="invoice"' />
+                
+                <label for='txn-date-input' data-bind='visible:txnFilterType()=="tdate"'>Transaction Date(s)</label>
+                <div class="input-group" data-bind='visible:txnFilterType()=="tdate"'>
+                  <div class="input-group-prepend">
+                      <button class="btn date-btn btn-outline-secondary dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" data-bind='text:tdateFilterOp()'>
+                      </button>
+                      <div class="dropdown-menu">
+                        <a class="dropdown-item date-op" id='op-eq' data-bind='click:changeTdateOp' href="#">Equal</a>
+                        <a class="dropdown-item date-op" id='op-bf' data-bind='click:changeTdateOp' href="#">Before</a>
+                        <a class="dropdown-item date-op" id='op-af' data-bind='click:changeTdateOp' href="#">After</a>
+                        <a class="dropdown-item date-op" id='op-bw' data-bind='click:changeTdateOp' href="#">Between</a>
+                      </div>
+                  </div>
+                  <input type='text' id='txn-frdate' class='form-control' placeholder='From Date' data-bind='visible:tdateFilterOp()!="Before"' />
+                  <input type='text' id='txn-todate' class='form-control' placeholder='To Date' data-bind='visible:(tdateFilterOp()=="Before"||tdateFilterOp()=="Between")' />
+                </div>
+
+                <br>
+                <div class='input-group' data-bind='visible:txnFilterType()!="curmonth" && txnFilterType()!="curweek"'>
+                    <button type='submit' class='btn btn-success form-control'>
+                      <i class='fas fa-search'></i> &nbsp; Search
+                    </button>
+                    <button type='button' class='btn btn-secondary form-control' data-bind='click:clearTxnSearchForm'>
+                      <i class='fas fa-eraser'></i> &nbsp; Clear
+                    </button>
+                </div>
+              </div>
+              <div class='col-md-2 form-group'>
+              </div>
+            </div>
+            <div class='row' style='margin-top: 0'>
+              <div class='col-md'>
+              </div>
+              <div class='col-md'>
+              </div>
+              <div class='col-md'></div>
+              <div class='col-md'></div>
+            </div>
+          </form>
+          <div class='row' style='padding-top: 1%'>
+            <div class='col-md-8'>
+                <input type='hidden' id='selected-txn-row-id' value='' />
+                <button type='button' style='display:none' id='select-txn-row-btn' data-bind='click:viewTxnDetails'></button>
+                <h5>Transactions</h5>
+                <div class='table-container-md'>
+                  <table class='table table-hover txn-table' id='txn-table'>
+                    <thead class='thead-dark txn-thead'>
+                      <tr>
+                        <th>Invoice #</th> 
+                        <th>Transaction Date</th>
+                        <th>Cashier</th>
+                        <th>Total Sales</th>
+                        <th>Amount Given</th>
+                        <th>Change</th>
+                        <th>Breakdown</th>
+                      </tr>
+                    </thead>
+                    <tbody class='table-tbody' data-bind='foreach:filterTransactions'>
+                      <tr>
+                        <td data-bind='text:InvoiceNum()'></td>
+                        <td data-bind='text:new moment(TxnDate()).format("MMM D, YYYY - hh:mmA")'></td>
+                        <td data-bind='text:Cashier()'></td>
+                        <td data-bind='text:TotalSales().toFixed(2)'></td>
+                        <td data-bind='text:AmtTendered().toFixed(2)'></td>
+                        <td data-bind='text:Change().toFixed(2)'></td>
+                        <td>
+                          <button type='button' class='btn btn-dark view-details-btn' data-bind='attr:{id:"table-row-"+RowId()}, click:selectTxnRow'>
+                            <i class='fas fa-search'></i>
+                          </button>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+            </div>
+            <div class='col-md-4'>
+                <h5>Sales Breakdown <small id='selected-txn-invoice'></small></h5>
+                <table class='table table-hover txn-sales-table' id='txn-sales-table'>
+                  <thead class='thead-dark'>
+                    <tr>
+                      <th>Qty</th>
+                      <th>Description</th>
+                      <th>Price</th>
+                      <th>Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody class='table-tbody' data-bind='if:transactionSales().length == 0'>
+                    <tr>
+                      <td colspan=4>No data to display. Select a transaction to view breakdown.</td>
+                    </tr>
+                  </tbody>
+                  <tbody class='table-tbody' data-bind='foreach:transactionSales'>
+                    <tr>
+                      <td data-bind='text:saleqty'></td>
+                      <td data-bind='text:pname'></td>
+                      <td data-bind='text:parseFloat(saleprice / saleqty).toFixed(2)'></td>
+                      <td data-bind='text:parseFloat(saleprice).toFixed(2)'></td>
+                    </tr>
+                  </tbody>
+                  <tfoot class='table-tfoot' data-bind='if:transactionSales().length > 0'>
+                    <tr>
+                      <td colspan=3 style='text-align:right'>
+                        VAT <br>
+                        VATable Sales <br>
+                        Total Amount
+                      </td>
+                      <td>
+                        <span data-bind='text:parseFloat(getTotalSales() * 0.12).toFixed(2)'></span><br>
+                        <span data-bind='text:parseFloat(getTotalSales() * 0.88).toFixed(2)'></span> <br>
+                        <span data-bind='text:getTotalSales().toFixed(2)'></span>
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+            </div>
+          </div>
+        </div>
+        <!-- STOCK LEDGER TAB -->
+        <div class='tab-pane fade' id='nav-stock-ledger' role='tabpanel' aria-labelledby='nav-stock-ledger-tab' data-bind='visible:currentUser()!=null&&currentUser().RoleId()!=2'>
+          <div class='row' style='margin: 0.5% 0'>
+              <div class='col-lg-10 col-sm-10 inventory-toolbar'>
+                <button type='button' class='btn btn-dark stock-ledger-btn' id='view-all-changes-btn' data-bind='click:resetStockFilter'>
+                  View All Changes
+                </button>
+                <button type='button' class='btn btn-dark stock-ledger-btn' id='view-stock-changes-btn' data-bind='click:filterStockChanges'>
+                  View Stock Changes
+                </button>
+                <button type='button' class='btn btn-dark stock-ledger-btn' id='view-price-changes-btn' data-bind='click:filterPriceChanges'>
+                  View Price Changes
+                </button>
+                <button type='button' class='btn btn-dark stock-ledger-btn' id='view-product-changes-btn' data-bind='click:filterProductChanges'>
+                  View Description Changes
+                </button>
+              </div>
+              <div class='col-lg-2 col-sm-2 inventory-toolbar' style='text-align: right'>
+                <button type='button' class='btn btn-dark stock-ledger-btn' id='refresh-stock-ledger-table-btn' data-bind='click:refreshStockLedgerTable'>
+                  <i class='fas fa-sync'></i>&nbsp; Refresh Table
+                </button>
+              </div>
+          </div>
+          <div class='row'>
+            <div class='col-lg'>
+              <div class='table-container-lg'>
+                <table class='table table-hover stock-ledger-table'>
+                  <thead class='thead-dark'>
+                    <tr>
+                      <th>Date</th>
+                      <th>Product Description</th>
+                      <th>Changed By</th>
+                      <th>Old Quantity</th>
+                      <th>New Quantity</th>
+                      <th>Old Description</th>
+                      <th>New Description</th>
+                      <th>Old Price</th>
+                      <th>New Price</th>
+                      <th>Reason</th>
+                    </tr>
+                  </thead>
+                  <tbody class='table-tbody' data-bind='foreach:filterStocks'>
+                    <tr>
+                      <td data-bind='text:new moment(scdate).format("MM-DD-YYYY hh:mma")'></td>
+                      <td data-bind='text:pname'></td>
+                      <td data-bind='text:user'></td>
+                      <td data-bind='text:oldcount'></td>
+                      <td data-bind='text:newcount'></td>
+                      <td data-bind='text:olddesc'></td>
+                      <td data-bind='text:newdesc'></td>
+                      <td data-bind='text:(oldprice!=null)?parseFloat(oldprice).toFixed(2):" "'></td>
+                      <td data-bind='text:(newprice!=null)?parseFloat(newprice).toFixed(2):" "'></td>
+                      <td data-bind='text:reason'></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- SALES RECORDS TAB -->
+        <div class='tab-pane fade' id='nav-sales-records' role='tabpanel' aria-labelledby='nav-sales-records-tab' data-bind='visible:currentUser()!=null&&currentUser().RoleId()!=2'>
+          <!-- TOOLBAR BUTTONS -->
+          <div class='row' style='margin: 1% 0'>
+            <div class='col-lg col-sm-12 inventory-toolbar'>
+              <button type='button' class='btn btn-dark sales-records-btn' id='filter-products-btn' data-toggle='collapse' data-target='#product-filter-collapse' aria-expanded='false' aria-controls='#product-filter-collapse' data-bind='click:toggleSrFilterShown'>
+                <i class='fas fa-filter'></i> &nbsp; Show Filters &nbsp; 
+                <i class='fas fa-caret-down' data-bind='visible:!srFilterShown()'></i>
+                <i class='fas fa-caret-up' data-bind='visible:srFilterShown()'></i>
+              </button>
+              <button type='button' class='btn btn-dark sales-records-btn' id='view-all-sales-records-btn' data-bind='click:toggleSalesRecordsDisplay, visible:!showAllSales()'>
+                <i class='fas fa-calendar-alt'></i> &nbsp; View All Sales by Date
+              </button>
+              <button type='button' class='btn btn-dark sales-records-btn' id='view-all-sales-by-product-btn' data-bind='click:toggleSalesRecordsDisplay, visible:showAllSales()'>
+                <i class='fas fa-shopping-cart'></i> &nbsp; View All Sales by Product
+              </button>
+            </div>
+            <div class='col-lg col-sm-12 inventory-toolbar' style='text-align: right'>
+              <button type='button' class='btn btn-dark sales-records-btn' id='export-current-view-sbp-btn' data-bind='click:exportCurrentViewSalesByProduct'>
+                <i class='fas fa-file-export'></i>&nbsp; Export Current View
+              </button>
+              <button type='button' class='btn btn-dark sales-records-btn' id='refresh-sales-records-table-btn' data-bind='click:refreshSalesRecordsTable'>
+                <i class='fas fa-sync'></i>&nbsp; Refresh Records
+              </button>
+            </div>
+          </div>
+
+          <!-- FILTER COLLAPSE DIV -->
+          <div class='row collapse' id='product-filter-collapse' style='padding: 0 1% 1% 1%'>
+            <div class='col-md-2'></div>
+            <div class='col-md-8 form-group'>
+              <form id='sr-product-filter-form'>
+                <label for='sr-category-filter'>Category</label>
+                <select class='form-control' id='sr-category-filter' data-bind='foreach:categories'>
+                  <option data-bind='text:Name(), value:RowId()'></option>
+                </select>
+
+                <label for='sr-pname-filter'>Product Description</label>
+                <select class='form-control' id='sr-pname-filter' data-bind='foreach:srFilterProducts'>
+                  <option data-bind='text:ProdName(), value:RowId()'></option>
+                </select>
+
+                <label for='sr-date-input' data-bind='visible:showAllSales()'>Sales Date(s)</label>
+                <div class="input-group" data-bind='visible:showAllSales()'>
+                  <div class="input-group-prepend">
+                      <button class="btn date-btn btn-outline-secondary dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" data-bind='text:sdateFilterOp()'>
+                      </button>
+                      <div class="dropdown-menu">
+                        <a class="dropdown-item date-op" id='op-eq' data-bind='click:changeSdateOp' href="#">Equal</a>
+                        <a class="dropdown-item date-op" id='op-bf' data-bind='click:changeSdateOp' href="#">Before</a>
+                        <a class="dropdown-item date-op" id='op-af' data-bind='click:changeSdateOp' href="#">After</a>
+                        <a class="dropdown-item date-op" id='op-bw' data-bind='click:changeSdateOp' href="#">Between</a>
+                      </div>
+                  </div>
+                  <input type='text' id='sr-frdate' class='form-control' placeholder='From Date' data-bind='visible:sdateFilterOp()!="Before"' />
+                  <input type='text' id='sr-todate' class='form-control' placeholder='To Date' data-bind='visible:(sdateFilterOp()=="Before"||sdateFilterOp()=="Between")' />
+                </div>
+              </form>
+            </div>
+            <div class='col-md-2'></div>
+          </div>
+
+          <!-- SALES RECORDS TABLES -->
+          <div class='row'>
+            <div class='col-lg'>
+              <div data-bind='attr:{class:(srFilterShown()) ? "table-container-md" : "table-container-lg"}, visible:showAllSales()'>
+                <table class='table table-hover sales-records-table'>
+                  <thead class='thead-dark'>
+                    <tr>
+                      <th>Sales Date</th>
+                      <th>Product Description</th>
+                      <th>Quantity Sold</th>
+                      <th>Total Sale Price</th>
+                    </tr>
+                  </thead>
+                  <tbody class='table-tbody' data-bind='foreach:filterSalesRecords'>
+                    <tr>
+                      <td data-bind='text:new moment(sdate).format("MM-DD-YYYY hh:mma")'></td>
+                      <td data-bind='text:pname'></td>
+                      <td data-bind='text:saleqty'></td>
+                      <td data-bind='text:"P"+parseFloat(saleprice).toFixed(2)'></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class='row' style='padding: 0.5% 1%' data-bind='visible:showAllSales()'>
+                <h4>Total Sales: &nbsp;<small data-bind='text:"PHP "+parseFloat(totSalesByDate()).toFixed(2)'></small></h4>
+              </div>
+              <div data-bind='attr:{class:(srFilterShown()) ? "table-container-md" : "table-container-lg"}, visible:!showAllSales()'>
+                <table class='table table-hover sales-records-table'>
+                  <thead class='thead-dark'>
+                    <tr>
+                      <th>
+                        Product Category &nbsp;
+                        <a href='#' class='sort-arrow fas fa-caret-up' id='sort-category-asc' data-bind='click:sortSales, visible:sortByAscending()||currentSortCol()!="category"'></a>
+                        <a href='#' class='sort-arrow fas fa-caret-down' id='sort-category-desc' data-bind='click:sortSales, visible:!(sortByAscending())&&currentSortCol()=="category"'></a>
+                      </th>
+                      <th>
+                        Product Description &nbsp;
+                        <a href='#' class='sort-arrow fas fa-caret-up' id='sort-pname-asc' data-bind='click:sortSales, visible:sortByAscending()||currentSortCol()!="pname"'></a>
+                        <a href='#' class='sort-arrow fas fa-caret-down' id='sort-pname-desc' data-bind='click:sortSales, visible:!(sortByAscending())&&currentSortCol()=="pname"'></a>
+                      </th>
+                      <th>
+                        Total Sales Made &nbsp;
+                        <a href='#' class='sort-arrow fas fa-caret-up' id='sort-totalSales-asc' data-bind='click:sortSales, visible:sortByAscending()||currentSortCol()!="totalSales"'></a>
+                        <a href='#' class='sort-arrow fas fa-caret-down' id='sort-totalSales-desc' data-bind='click:sortSales, visible:(!sortByAscending())&&currentSortCol()=="totalSales"'></a>
+                      </th>
+                      <th>
+                        Total Quantity Sold &nbsp;
+                        <a href='#' class='sort-arrow fas fa-caret-up' id='sort-totalQty-asc' data-bind='click:sortSales, visible:sortByAscending()||currentSortCol()!="totalQty"'></a>
+                        <a href='#' class='sort-arrow fas fa-caret-down' id='sort-totalQty-desc' data-bind='click:sortSales, visible:!(sortByAscending())&&currentSortCol()=="totalQty"'></a>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody class='table-tbody' data-bind='foreach:filterSalesByProduct'>
+                    <tr>
+                      <td data-bind='text:category'></td>
+                      <td data-bind='text:pname'></td>
+                      <td data-bind='text:"P"+parseFloat(totalSales).toFixed(2)'></td>
+                      <td data-bind='text:totalQty'></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class='row' style='padding: 0.5% 1%' data-bind='visible:!showAllSales()'>
+                <h4>Total Sales: &nbsp;<small data-bind='text:"PHP "+parseFloat(totSalesByProd()).toFixed(2)'></small></h4>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- ACCOUNT TAB -->
+        <div class='tab-pane fade' id='nav-myaccount' role='tabpanel' aria-labelledby='nav-myaccount-tab'>
+          <!-- Change Password Modal -->
+          <div class='modal fade' id='change-pw-modal'>
+            <div class="modal-dialog modal modal-dialog-centered" role="document">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title" id="change-pw-modal-label">Change Password</h5>
+                  <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                  </button>
+                </div>
+                <div class="modal-body" style='padding: 5%'>
+                  <form id='change-pw-form'>
+                    <div class='row'>
+                      <div class='col-md form-group'>
+                        <label for='old-user-pword'>Old Password</label>
+                        <input type='password' id='old-user-pword' name='old-user-pword' class='form-control' placeholder='Enter your old password' required/>
+                        
+                        <label for='new-change-pword'>New Password</label>
+                        <input type='password' id='new-change-pword' name='new-change-pword' class='form-control' placeholder='Enter a secure password' required/>
+                        
+                        <label for='new-change-confirm-pword'>Confirm New Password</label>
+                        <input type='password' id='new-change-confirm-pword' name='new-change-confirm-pword' class='form-control' placeholder='Re-type password' required/>
+                      </div>
+                    </div>
+                    <div class='row'>
+                      <div class='col-md form-group' style='text-align: right'>
+                        <input type='submit' class='btn btn-success' id='change-pw-submit-btn' data-bind='click:changePassword' value='Submit' />
+                      </div>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class='row' style='padding-top:1.5%' data-bind='if:currentUser()!=null'>
+            <div class='col-md-4'>
+              <h5>My Account</h5>
+              <form id='myaccount-form'>
+                  <label for='my-fname'>First Name</label>
+                  <input class='form-control' id='my-fname' data-bind='value:currentUser().FirstName()' disabled />
+    
+                  <label for='my-lname'>Last Name</label>
+                  <input class='form-control' id='my-lname' data-bind='value:currentUser().LastName()' disabled />
+    
+                  <label for='my-uname'>Username</label>
+                  <input class='form-control' id='my-uname' data-bind='value:currentUser().UserName()' disabled />
+    
+                  <label for='my-role'>Role</label>
+                  <input class='form-control' id='my-role' data-bind='value:currentUser().RoleName()' disabled />
+
+                  <br>
+                  <input type='button' class='btn btn-success form-control' id='change-pw-btn' value='Change Password' data-bind='click:triggerChangePwModal' />
+
+                  <br> <br>
+                  <input type='button' class='btn btn-secondary form-control' id='sign-out-btn' value='Sign Out' data-bind='click:signOutUser' /> 
+              </form>
+            </div>
+          </div>
+        </div>
+        <!-- USER MANAGEMENT TAB -->
+        <div class='tab-pane fade' id='nav-users' role='tabpanel' aria-labelledby='nav-users-tab' data-bind='visible:currentUser()!=null&&currentUser().RoleId()==1'>
+          <!-- Add User Modal -->
+          <div class='modal fade' id='add-user-modal'>
+            <div class="modal-dialog modal modal-dialog-centered" role="document">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title" id="add-user-modal-label">Add New User</h5>
+                  <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                  </button>
+                </div>
+                <div class="modal-body" style='padding: 5%'>
+                  <form id='add-user-form'>
+                    <div class='row'>
+                      <div class='col-md form-group'>
+                        <label for='new-user-fname'>First Name</label>
+                        <input type='text' id='new-user-fname' name='new-user-fname' class='form-control' placeholder='Juan' required/>
+                        
+                        <label for='new-user-lname'>Last Name</label>
+                        <input type='text' id='new-user-lname' name='new-user-lname' class='form-control' placeholder='Dela Cruz' required/>
+
+                        <label for='new-user-uname'>Username</label>
+                        <input type='text' id='new-user-uname' name='new-user-uname' class='form-control' placeholder='j.delacruz' required/>
+                        
+                        <label for='new-user-pword'>Password</label>
+                        <input type='password' id='new-user-pword' name='new-user-pword' class='form-control' placeholder='Enter a secure password' required/>
+                        
+                        <label for='new-user-confirm-pword'>Confirm Password</label>
+                        <input type='password' id='new-user-confirm-pword' name='new-user-confirm-pword' class='form-control' placeholder='Re-type password' required/>
+
+                        <label for='new-user-role'>User Role</label>
+                        <select id='new-user-role' name='new-user-role' class='form-control'>
+                          <option value=''> -- Select Role -- </option>
+                          <option value=1>Administrator</option>
+                          <option value=2>Cashier</option>
+                          <option value=3>Manager</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div class='row'>
+                      <div class='col-md form-group' style='text-align: right'>
+                        <input type='submit' class='btn btn-success' id='new-user-submit-btn' data-bind='click:addNewUser' value='Add User' />
+                      </div>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class='row' style='margin:1% 0'>
+            <div class='col-lg'>
+              <h5 style='padding-top:1%'>Users</h5>
+            </div>
+          </div>
+          <div class='row'>
+            <div class='col-lg'>
+              <div class='table-container-lg'>
+                <table class='table table-hover users-table'>
+                  <thead class='thead-dark'>
+                    <tr>
+                      <th>Full Name</th>
+                      <th>Username</th>
+                      <th>Role</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody class='table-tbody' data-bind='foreach:users'>
+                    <tr>
+                      <td data-bind='text:FullName()'></td>
+                      <td data-bind='text:UserName()'></td>
+                      <td data-bind='text:RoleName()'></td>
+                      <td>
+
+                      </td>
+                    </tr>
+                  </tbody>
+                  <tfoot style='font-size:14px'>
+                    <tr>
+                      <td>
+                        <a href='#' id='add-user-btn' data-bind='click:openNewUserModal'>Add New User</a>
+                      </td>
+                      <td colspan=2></td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- You can also require other files to run in this process -->
+    <script src="./js/index.js"></script>
+  </body>
+</html>
