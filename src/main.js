@@ -1,10 +1,11 @@
-const { app, BrowserWindow, Menu, ipcMain, dialog } = require('electron')
+const { app, BrowserWindow, Menu, ipcMain, dialog, autoUpdater } = require('electron')
+const isDev = require('electron-is-dev')
 const url  = require('url')
 const path = require('path')
+const server = 'https://update.electronjs.org'
+const feed = `${server}/ericxavierrosales/splash-town-ims/${process.platform}-${process.arch}/${app.getVersion()}`
 
-require ('update-electron-app')({
-  updateInterval: '5 minutes'
-})
+require ('update-electron-app')()
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) { // eslint-disable-line global-require
@@ -42,6 +43,22 @@ const createWindow = () => {
 
   // Open the DevTools.
   // mainWindow.webContents.openDevTools();
+
+  // auto-update
+  if (!isDev) {
+    console.log('App is in production')
+    autoUpdater.setFeedURL(feed)
+    autoUpdater.checkForUpdates()
+
+    setInterval(() => {
+      autoUpdater.checkForUpdates()
+    }, 5 * 60 * 1000)
+  }
+  else {
+    console.log('App is in development')
+  }
+
+
 
   // Emitted when the window is closed.
   mainWindow.on('closed', () => {
@@ -184,3 +201,20 @@ if (process.env.NODE_ENV !== 'production') {
 if (process.platform == 'darwin') {
   menuTemplate.unshift({})
 }
+
+
+// AUTOUPDATER EVENTS
+autoUpdater.on('update-available', () => {
+  dialog.showMessageBoxSync(mainWindow, {
+    title: 'Checking for updates',
+    message: 'An update is available!',
+    type: notif.type
+  })
+})
+autoUpdater.on('update-not-available', () => {
+  dialog.showMessageBoxSync(mainWindow, {
+    title: 'Checking for updates',
+    message: 'A new update is currently not available!',
+    type: notif.type
+  })
+})

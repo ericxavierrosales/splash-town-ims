@@ -17,7 +17,6 @@ const Sale          = require('../src/js/Sale')
 const Transaction   = require('../src/js/Transaction')
 
 const {ipcRenderer} = electron
-const {autoUpdater} = electron
 const {dialog}      = electron.remote
 const addForm       = document.querySelector('#add-form')
 const restockForm   = document.querySelector('#restock-form')
@@ -184,7 +183,13 @@ $(document).ready(function() {
 
         saSearchForm.addEventListener('submit', (e) => {
             e.preventDefault()
-
+            /*
+            ipcRenderer.send('notif:send', {
+                title: 'HEYO',
+                message: 'Product!',
+                type: 'info'
+            })
+            */
             self.saleProdFilter($('#sales-search-input').val())
         })
 
@@ -304,6 +309,19 @@ $(document).ready(function() {
             $('#txn-frdate').val('')
             $('#txn-todate').val('')
         }
+        /*
+        self.truncateTable = function() {
+            if (confirm("Truncate the products table?")) {
+                if (confirm("Are you absolutely sure?")) {
+                    let truncStmt = db.prepare(`DELETE FROM PRODUCT`)
+                    truncStmt.run()
+                
+                    truncStmt.finalize()
+                    self.products = ko.observableArray([])
+                }
+            }
+        }
+        */
 
         // SALES RECORDS table
         self.toggleSrFilterShown = function() {
