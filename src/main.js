@@ -3,7 +3,6 @@ const url  = require('url')
 const path = require('path')
 
 require ('update-electron-app')({
-  repo: 'ericxavierrosales/splash-town-ims',
   updateInterval: '5 minutes'
 })
 

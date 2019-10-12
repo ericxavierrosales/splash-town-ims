@@ -42,7 +42,7 @@ $(document).ready(function() {
 
     function viewModel() {
         let self = this
-        self.pageTitle   = "Sample Store"
+        self.pageTitle   = "Splash Town"
         self.currentUser = ko.observable()
         
         self.users            = ko.observableArray([])
