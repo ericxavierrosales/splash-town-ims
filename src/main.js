@@ -1,6 +1,10 @@
-const { app, BrowserWindow, Menu, Notification, ipcMain, dialog } = require('electron')
+const { app, BrowserWindow, Menu, ipcMain, dialog } = require('electron')
 const url  = require('url')
 const path = require('path')
+
+require ('update-electron-app')({
+  updateInterval: '5 minutes'
+})
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) { // eslint-disable-line global-require

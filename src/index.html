@@ -606,7 +606,10 @@
               </button>
             </div>
             <div class='col-lg col-sm-12 inventory-toolbar' style='text-align: right'>
-              <button type='button' class='btn btn-dark sales-records-btn' id='export-current-view-sbp-btn' data-bind='click:exportCurrentViewSalesByProduct'>
+              <button type='button' class='btn btn-dark sales-records-btn' id='export-current-view-sbp-btn' data-bind='click:exportCurrentViewSalesByProduct, visible:!showAllSales()'>
+                <i class='fas fa-file-export'></i>&nbsp; Export Current View
+              </button>
+              <button type='button' class='btn btn-dark sales-records-btn' id='export-current-view-sbd-btn' data-bind='click:exportCurrentViewSalesByDate, visible:showAllSales()'>
                 <i class='fas fa-file-export'></i>&nbsp; Export Current View
               </button>
               <button type='button' class='btn btn-dark sales-records-btn' id='refresh-sales-records-table-btn' data-bind='click:refreshSalesRecordsTable'>

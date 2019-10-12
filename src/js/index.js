@@ -741,7 +741,31 @@ $(document).ready(function() {
 
         // SALES RECORDS functions
         self.exportCurrentViewSalesByProduct = function() {
-            console.table(self.filterSalesByProduct())
+            if (showConfirm("Export this view to an excel file?")) {
+                let ws = XLSX.utils.json_to_sheet(self.filterSalesByProduct(), {header: ['category', 'pname', 'totalSales', 'totalQty']})
+                let wb = XLSX.utils.book_new()
+                XLSX.utils.book_append_sheet(wb, ws, "Total Sales by Product")
+                let exportFileName = dialog.showSaveDialogSync(null, {
+                    filters: [
+                        { name: 'Spreadsheets (*.xls, *.xlsx)', extensions: ['xlsx', 'xls'] }
+                    ]
+                })
+                XLSX.writeFile(wb, exportFileName)
+            }
+        }
+        
+        self.exportCurrentViewSalesByDate = function() {
+            if (showConfirm("Export this view to an excel file?")) {
+                let ws = XLSX.utils.json_to_sheet(self.filterSalesRecords(), {header: ['sdate', 'pname', 'saleqty', 'saleprice']})
+                let wb = XLSX.utils.book_new()
+                XLSX.utils.book_append_sheet(wb, ws, "Total Sales by Date")
+                let exportFileName = dialog.showSaveDialogSync(null, {
+                    filters: [
+                        { name: 'Spreadsheets (*.xls, *.xlsx)', extensions: ['xlsx', 'xls'] }
+                    ]
+                })
+                XLSX.writeFile(wb, exportFileName)
+            }
         }
 
         self.refreshSalesRecordsTable = function() {
