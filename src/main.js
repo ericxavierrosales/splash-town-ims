@@ -1,9 +1,14 @@
+// Set environment variables
+process.env.NODE_ENV = 'production'
+process.env.GITHUB_TOKEN = 'e63a912145b4eda44322e3ec3eac25cebe6296e8'
+
+// Requires
 const { app, BrowserWindow, Menu, ipcMain, dialog, autoUpdater } = require('electron')
-const isDev = require('electron-is-dev')
-const url  = require('url')
-const path = require('path')
+const isDev  = require('electron-is-dev')
+const url    = require('url')
+const path   = require('path')
 const server = 'https://update.electronjs.org'
-const feed = `${server}/ericxavierrosales/splash-town-ims/${process.platform}-${process.arch}/${app.getVersion()}`
+const feed   = `${server}/ericxavierrosales/splash-town-ims/${process.platform}-${process.arch}/${app.getVersion()}`
 
 require ('update-electron-app')()
 
@@ -12,14 +17,13 @@ if (require('electron-squirrel-startup')) { // eslint-disable-line global-requir
   app.quit()
 }
 
-// Set environment to PRD
-process.env.NODE_ENV = 'production'
 app.setAppUserModelId("com.electron.splash-town-pos-ims")
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
 let mainWindow
 let loginWindow
+let currWindow
 let loggedInUser
 
 const createWindow = () => {
@@ -58,8 +62,6 @@ const createWindow = () => {
     console.log('App is in development')
   }
 
-
-
   // Emitted when the window is closed.
   mainWindow.on('closed', () => {
     // Dereference the window object, usually you would store windows
@@ -71,6 +73,8 @@ const createWindow = () => {
   // Initialize Menu
   const mainMenu = Menu.buildFromTemplate(menuTemplate)
   Menu.setApplicationMenu(mainMenu)
+
+  currWindow = mainWindow
 }
 
 function openLoginWindow() {
@@ -98,6 +102,8 @@ function openLoginWindow() {
   // Initialize menu
   const blankMenu = Menu.buildFromTemplate([])
   Menu.setApplicationMenu(blankMenu)
+
+  currWindow = loginWindow
 }
 
 function signOut() {
@@ -167,6 +173,12 @@ const menuTemplate = [
               role: 'reload'
           },
           {
+              label: "Check for Updates",
+              click() {
+                autoUpdater.checkForUpdates()
+              }
+          },
+          {
               label: 'Sign Out',
               click() {
                 signOut()
@@ -204,17 +216,46 @@ if (process.platform == 'darwin') {
 
 
 // AUTOUPDATER EVENTS
-autoUpdater.on('update-available', () => {
+autoUpdater.on('checking-for-update', () => {
+  mainWindow.webContents.send('notif:send', {
+    title: 'Checking for updates',
+    message: 'Checking online for new updates...'
+  })
   dialog.showMessageBoxSync(mainWindow, {
     title: 'Checking for updates',
-    message: 'An update is available!',
-    type: notif.type
+    message: 'Checking online for new updates...'
+  })
+})
+
+autoUpdater.on('update-available', () => {
+  mainWindow.webContents.send('notif:send', {
+    title: 'Checking for updates',
+    message: 'An update is available!'
+  })
+  dialog.showMessageBoxSync(mainWindow, {
+    title: 'Checking for updates',
+    message: 'An update is available!'
   })
 })
 autoUpdater.on('update-not-available', () => {
+  mainWindow.webContents.send('notif:send', {
+    title: 'Checking for updates',
+    message: 'A new update is currently not available!'
+  })
   dialog.showMessageBoxSync(mainWindow, {
     title: 'Checking for updates',
-    message: 'A new update is currently not available!',
-    type: notif.type
+    message: 'A new update is currently not available!'
   })
+})
+
+autoUpdater.on('update-downloaded', () => {
+  mainWindow.webContents.send('notif:send', {
+    title: 'Checking for updates',
+    message: 'A new update has been downloaded! Restarting app...'
+  })
+  dialog.showMessageBoxSync(mainWindow, {
+    title: 'Checking for updates',
+    message: 'A new update has been downloaded! Restarting app...'
+  })
+  autoUpdater.quitAndInstall()
 })

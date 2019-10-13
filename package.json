@@ -1,7 +1,7 @@
 {
   "name": "splash-town-ims",
   "productName": "Splash Town POS & IMS",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "A POS and Inventory Management System for Splash Town Waterpark & Resort store",
   "main": "src/main.js",
   "build": {
@@ -23,9 +23,12 @@
     "forge": {
       "make_targets": {
         "win32": [
-          "squirrel",
-          "wix"
+          "squirrel"
         ]
+      },
+      "github_repository": {
+        "owner": "ericxavierrosales",
+        "name": "splash-town-ims"
       },
       "packagerConfig": {},
       "electronPackagerConfig": {
@@ -52,6 +55,18 @@
           "name": "@electron-forge/maker-rpm",
           "config": {}
         }
+      ],
+      "publishers": [
+        {
+          "name": "@electron-forge/publisher-github",
+          "config": {
+            "repository": {
+              "owner": "ericxavierrosales",
+              "name": "splash-town-ims"
+            },
+            "prerelease": true
+          }
+        }
       ]
     }
   },
@@ -59,7 +74,6 @@
     "@fortawesome/fontawesome-free": "^5.11.2",
     "bcrypt": "^3.0.6",
     "bootstrap": "^4.3.1",
-    "electron-is-dev": "^1.1.0",
     "electron-squirrel-startup": "^1.0.0",
     "jquery": "^3.4.1",
     "jquery.hotkeys": "^0.1.0",
@@ -71,8 +85,9 @@
     "popper.js": "^1.15.0",
     "python": "0.0.4",
     "sqlite3": "^4.1.0",
+    "xlsx": "^0.15.1",
     "update-electron-app": "^1.5.0",
-    "xlsx": "^0.15.1"
+    "electron-is-dev": "^1.1.0"
   },
   "devDependencies": {
     "@electron-forge/cli": "^6.0.0-beta.45",
@@ -80,6 +95,7 @@
     "@electron-forge/maker-rpm": "^6.0.0-beta.45",
     "@electron-forge/maker-squirrel": "^6.0.0-beta.45",
     "@electron-forge/maker-zip": "^6.0.0-beta.45",
+    "@electron-forge/publisher-github": "^6.0.0-beta.45",
     "electron": "6.0.10",
     "electron-rebuild": "^1.8.6"
   }
