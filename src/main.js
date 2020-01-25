@@ -1,6 +1,6 @@
 // Set environment variables
-process.env.NODE_ENV = 'production'
-process.env.GITHUB_TOKEN = 'e63a912145b4eda44322e3ec3eac25cebe6296e8'
+//process.env.NODE_ENV = 'production'
+process.env.GITHUB_TOKEN = '14346e52a2c949917c28d125f076f0d7acec936b'
 
 // Requires
 const { app, BrowserWindow, Menu, ipcMain, dialog, autoUpdater } = require('electron')
@@ -46,7 +46,7 @@ const createWindow = () => {
   }))
 
   // Open the DevTools.
-  // mainWindow.webContents.openDevTools();
+    mainWindow.webContents.openDevTools();
 
   // auto-update
   if (!isDev) {
@@ -75,6 +75,37 @@ const createWindow = () => {
   Menu.setApplicationMenu(mainMenu)
 
   currWindow = mainWindow
+
+  
+  // AUTOUPDATER EVENTS
+  autoUpdater.on('checking-for-update', () => {
+    dialog.showMessageBoxSync(mainWindow, {
+      title: 'Checking for updates',
+      message: 'Checking online for new updates...'
+    })
+  })
+
+  autoUpdater.on('update-available', () => {
+    dialog.showMessageBoxSync(mainWindow, {
+      title: 'Checking for updates',
+      message: 'An update is available!'
+    })
+  })
+
+  autoUpdater.on('update-not-available', () => {
+    dialog.showMessageBoxSync(mainWindow, {
+      title: 'Checking for updates',
+      message: 'There is no new update available! Check back later.'
+    })
+  })
+
+  autoUpdater.on('update-downloaded', () => {
+    dialog.showMessageBoxSync(mainWindow, {
+      title: 'Checking for updates',
+      message: 'A new update has been downloaded! Restarting app...'
+    })
+    autoUpdater.quitAndInstall()
+  })
 }
 
 function openLoginWindow() {
@@ -139,7 +170,6 @@ app.on('activate', () => {
 
 // IPC events
 ipcMain.on('notif:send', function(e, notif) {
-  mainWindow.webContents.send('notif:send', notif)
   dialog.showMessageBoxSync(mainWindow, {
     title: notif.title,
     message: notif.message,
@@ -214,48 +244,3 @@ if (process.platform == 'darwin') {
   menuTemplate.unshift({})
 }
 
-
-// AUTOUPDATER EVENTS
-autoUpdater.on('checking-for-update', () => {
-  mainWindow.webContents.send('notif:send', {
-    title: 'Checking for updates',
-    message: 'Checking online for new updates...'
-  })
-  dialog.showMessageBoxSync(mainWindow, {
-    title: 'Checking for updates',
-    message: 'Checking online for new updates...'
-  })
-})
-
-autoUpdater.on('update-available', () => {
-  mainWindow.webContents.send('notif:send', {
-    title: 'Checking for updates',
-    message: 'An update is available!'
-  })
-  dialog.showMessageBoxSync(mainWindow, {
-    title: 'Checking for updates',
-    message: 'An update is available!'
-  })
-})
-autoUpdater.on('update-not-available', () => {
-  mainWindow.webContents.send('notif:send', {
-    title: 'Checking for updates',
-    message: 'A new update is currently not available!'
-  })
-  dialog.showMessageBoxSync(mainWindow, {
-    title: 'Checking for updates',
-    message: 'A new update is currently not available!'
-  })
-})
-
-autoUpdater.on('update-downloaded', () => {
-  mainWindow.webContents.send('notif:send', {
-    title: 'Checking for updates',
-    message: 'A new update has been downloaded! Restarting app...'
-  })
-  dialog.showMessageBoxSync(mainWindow, {
-    title: 'Checking for updates',
-    message: 'A new update has been downloaded! Restarting app...'
-  })
-  autoUpdater.quitAndInstall()
-})

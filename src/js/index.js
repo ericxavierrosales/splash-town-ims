@@ -17,7 +17,6 @@ const Sale          = require('../src/js/Sale')
 const Transaction   = require('../src/js/Transaction')
 
 const {ipcRenderer} = electron
-const {autoUpdater} = electron
 const {dialog}      = electron.remote
 const addForm       = document.querySelector('#add-form')
 const restockForm   = document.querySelector('#restock-form')
@@ -27,8 +26,11 @@ const saSearchForm  = document.querySelector('#sales-search-form')
 const addSaleForm   = document.querySelector('#sales-form-add')
 const amtTenderForm = document.querySelector('#amt-tender-form')
 const txnFilterForm = document.querySelector('#filter-txn-form')
+const loginForm     = document.querySelector('#supervisor-login-form')
 const saltRounds    = 10
 const db            = new sqlite3.Database(path.join(__dirname, 'db/inventory.db'))
+
+const onScan        = require('onscan.js/onscan')
 
 let currentUserId
 
@@ -48,12 +50,12 @@ $(document).ready(function() {
         
         self.users            = ko.observableArray([])
         self.categories       = ko.observableArray([])
-        self.createCategories = ko.observableArray([])
         self.products         = ko.observableArray([])
         self.srFilterProducts = ko.observableArray([])
         self.sales            = ko.observableArray([])
         self.transactions     = ko.observableArray([])
         self.transactionSales = ko.observableArray([])
+        self.txnRevisions     = ko.observableArray([])
         self.stockRecords     = ko.observableArray([])
         self.salesRecords     = ko.observableArray([])
         self.salesByProduct   = ko.observableArray([])
@@ -83,12 +85,21 @@ $(document).ready(function() {
         self.sortByAscending = ko.observable(true)
 
         // Sales 
+        self.isPOSActive     = ko.observable(true)
         self.isProcessing    = ko.observable(false)
         self.amountTendered  = ko.observable(0)
-        self.totalSalesPrice = ko.observable(0)
+        self.totalSalesPrice   = ko.pureComputed(function() {
+            return self.sales().reduce(function(acc, current) {
+                return acc + current.SalePrice()
+            }, 0)
+        })
         self.changeGiven     = ko.computed(function() {
             return (self.amountTendered() == 0) ? 0 : self.amountTendered() - self.totalSalesPrice()
         })
+
+        // Non-observables
+        self.editedTxnId     = 0
+        self.editTxnAction   = ""
 
         // Datepicker
         const frSRPicker = datepicker('#sr-frdate', {
@@ -126,7 +137,6 @@ $(document).ready(function() {
             self.categories.push(new Category(0, "All"))
             db.each(`SELECT rowid, name FROM CATEGORY`, (err, row) => {
                 self.categories.push(new Category(row.rowid, row.name))
-                self.createCategories.push(new Category(row.rowid, row.name))
             })
 
             // Products Table
@@ -138,12 +148,12 @@ $(document).ready(function() {
 
             // Transactions Table
             db.each(`SELECT t.rowid, t.tdate, t.totalsales, t.invoicenumber, t.tenderamt, t.change, u.fname || ' ' || u.lname AS cashier 
-                     FROM TRANSACTION_RECORD t, USER u WHERE t.cashier = u.rowid`, (err, row) => {
+                     FROM TRANSACTION_RECORD t, USER u WHERE t.cashier = u.rowid AND t.status != 'Refunded'`, (err, row) => {
                 self.transactions.push(new Transaction(row.rowid, row.tdate, row.totalsales, row.invoicenumber, row.tenderamt, row.change, row.cashier))
             })
 
             // Sales Records Table
-            db.each(`SELECT s.rowid, s.sdate, p.rowid AS pid, p.pname, p.category, s.saleprice, s.saleqty FROM SALES_RECORD s, PRODUCT p WHERE s.pid = p.rowid ORDER BY s.sdate DESC`, (err, row) => {
+            db.each(`SELECT s.rowid, s.sdate, p.rowid AS pid, p.pname, p.category, s.saleprice, s.saleqty, s.tid FROM SALES_RECORD s, PRODUCT p WHERE s.pid = p.rowid ORDER BY s.sdate DESC`, (err, row) => {
                 self.salesRecords.push(row)
             })
 
@@ -190,7 +200,8 @@ $(document).ready(function() {
 
         self.filterProductsDynamic = ko.computed(() => {
             return ko.utils.arrayFilter(self.products(), (product) => {
-                return product.ProdName().toLowerCase().indexOf(self.prodDynFilter().toLowerCase()) != -1
+                return (product.ProdName().toLowerCase().indexOf(self.prodDynFilter().toLowerCase()) != -1) ||
+                    (product.ProdNum() == self.prodDynFilter())
             })
         })
 
@@ -223,7 +234,7 @@ $(document).ready(function() {
             else {
                 return ko.utils.arrayFilter(self.products(), function(product) {
                     return (product.ProdName().toLowerCase().indexOf(self.searchFilter().toLowerCase()) !== -1) ||
-                            (product.CategoryName().toLowerCase().indexOf(self.searchFilter().toLowerCase()) !== -1)
+                            (product.ProdNum().indexOf(self.searchFilter()) !== -1)
                 })
             }
         })
@@ -293,6 +304,12 @@ $(document).ready(function() {
                     }
                 })
             }
+        })
+
+        self.createCategories = ko.pureComputed(function() {
+            return ko.utils.arrayFilter(self.categories(), category => {
+                return category.RowId() != 0
+            })
         })
 
         self.clearTxnSearchForm = function() {
@@ -507,10 +524,114 @@ $(document).ready(function() {
             }
         }
 
-        // Sales functions
-        addSaleForm.addEventListener('submit', function(e) {
-            e.preventDefault()
+        self.exportInventoryFile = () => {
+            let file = dialog.showSaveDialogSync(null, {
+                filters: [
+                    {
+                        name: "Excel Files",
+                        extensions: ["xls", "xlsx"]
+                    }
+                ]
+            })
+            if (file) {
+                let tempProducts = []
+    
+                ko.utils.arrayForEach(self.products(), (prod) => {
+                    tempProducts.push({
+                        pnumber: prod.ProdNum(),
+                        pname: prod.ProdName(),
+                        pqty: prod.ProdQty(),
+                        pprice: prod.ProdPrice(),
+                        category: prod.Category()
+                    })
+                })
+                
+                let wb = XLSX.utils.book_new()
+                let ws = XLSX.utils.json_to_sheet(tempProducts)
+                XLSX.utils.book_append_sheet(wb, ws)
+                XLSX.writeFile(wb, file)
+    
+                ipcRenderer.send('notif:send', {
+                    title: 'Success!',
+                    message: 'Successfully exported inventory file.'
+                })
+            }
+        }
 
+        self.openCategoryModal = () => {
+            $('#category-modal').modal('toggle')
+        }
+
+        self.addNewCategory = () => {
+            if (showConfirm('Add new category?')) {
+                let index = self.categories().length - 2
+                let newCategory = $('#new-category-name').val()
+                let newId = self.categories()[index].RowId() + 1
+
+                let stmt = db.prepare(`INSERT INTO CATEGORY(rowid, name) VALUES(?, ?)`)
+                stmt.run(newId, newCategory)
+                stmt.finalize()
+
+                self.categories.splice(index + 1, 0, new Category(newId, newCategory))
+                $('#new-category-name').val('')
+            }
+        }
+
+        self.removeCategory = (data) => {
+            if (showConfirm('Are you sure you want to delete this category?\n\r\nAll existing products under this category will revert to Misc category by default.')) {
+                ko.utils.arrayForEach(ko.utils.arrayFilter(self.products(), product => {
+                    return product.Category() == data.RowId()
+                }), product => {
+                    product.Category(99)
+                    product.CategoryName('Misc')
+                })
+                
+                db.serialize(() => {
+                    let updateStmt = db.prepare(`UPDATE PRODUCT SET category = 99 WHERE category = ?`)
+                    updateStmt.run(data.RowId())
+                    updateStmt.finalize()
+
+                    let deleteStmt = db.prepare(`DELETE FROM CATEGORY WHERE rowid = ?`)
+                    deleteStmt.run(data.RowId())
+                    deleteStmt.finalize()    
+                })
+                
+                self.categories.remove(category => {
+                    return category.RowId() == data.RowId()
+                })
+
+                ipcRenderer.send('notif:send', {
+                    title: 'Success!',
+                    message: `Category - ${data.Name()} successfully removed.`
+                })  
+            }
+        }
+
+        // Sales functions
+        $('#nav-sales-tab').on('shown.bs.tab', e => {
+            self.isPOSActive(true)
+        })
+
+        $('#nav-sales-tab').on('hidden.bs.tab', e => {
+            self.isPOSActive(false)
+        })
+
+        onScan.attachTo(document, {
+            suffixKeyCodes: [13],
+            onScan: (sCode, iQty) => {
+                if (self.isPOSActive()) {
+                    let prod = ko.utils.arrayFirst(self.products(), (product) => {
+                        return product.ProdNum() == sCode
+                    })
+    
+                    $('#sales-prod-id').val(prod.RowId())
+                    $('#sales-prod-qty').val(1)
+                    self.addProduct()
+                }
+            }
+        })
+
+        self.addProduct = () => {
             let prodId = $('#sales-prod-id').val()
             let saleQty = parseFloat($('#sales-prod-qty').val())
 
@@ -534,7 +655,6 @@ $(document).ready(function() {
                     else {
                         self.sales.push(new Sale(prodId, soldProduct.ProdNum(), soldProduct.ProdName(), saleQty, salesPrice))
                     }
-                    self.totalSalesPrice(self.totalSalesPrice() + salesPrice)
         
                     //$('#sales-prod-id').val('')
                     $('#sales-prod-qty').val('')
@@ -547,15 +667,49 @@ $(document).ready(function() {
                     })
                 }
             }
+        }
 
+        addSaleForm.addEventListener('submit', function(e) {
+            e.preventDefault()
+
+            self.addProduct()
             $('#sale-qty-modal').modal('toggle')
         })
+
 
         salesForm.addEventListener('submit', function(e) {
             e.preventDefault()
 
             if (self.sales().length > 0) $('#amt-tender-modal').modal('toggle')
         })
+
+        self.subtractSaleQty = (data) => {
+            if (data.SaleQty() > 1) {
+                let unitPrice = data.SalePrice() / data.SaleQty()
+                data.SaleQty(data.SaleQty() - 1)
+                data.SalePrice(data.SaleQty() * unitPrice)
+            }
+            else {
+                if (self.sales().length > 0) {
+                    self.removeSaleProduct(data)
+                }
+                else if (self.txnRevisions().length > 0) {
+                    self.removeTxnRevision(data)
+                }
+            }
+        }
+
+        self.removeSaleProduct = (data) => {
+            self.sales.remove(sale => {
+                return sale.RowId() == data.RowId()
+            })
+        }
+
+        self.removeTxnRevision = (data) => {
+            self.txnRevisions.remove(sale => {
+                return sale.RowId() == data.RowId()
+            })
+        }
 
         $('#sale-qty-modal').on('shown.bs.modal', () => {
             $('#sales-prod-qty').focus()
@@ -645,7 +799,6 @@ $(document).ready(function() {
             })
 
             self.sales([])
-            self.totalSalesPrice(0)
             self.amountTendered(0)
             self.isProcessing(false)
         }
@@ -658,6 +811,194 @@ $(document).ready(function() {
             db.each(`SELECT pname, saleqty, saleprice FROM SALES_RECORD WHERE tid = ${txnId}`, function(err, row) {
                 self.transactionSales.push(row)
             })
+        }
+
+        self.editTxnRow = (txn) => {
+            let txnId = txn.RowId()
+            self.editedTxnId = txnId
+
+            self.txnRevisions([])
+            db.each(`SELECT s.rowid, p.pnumber, s.pname, s.saleqty, s.saleprice, s.tid FROM SALES_RECORD s, PRODUCT p WHERE s.pid = p.rowid AND s.tid = ${txnId}`, function(err, row) {
+                self.txnRevisions.push(new Sale(row.rowid, row.pnumber, row.pname, row.saleqty, row.saleprice, row.tid))
+            })
+
+            if (self.txnRevisions().length > 0) {
+                $('#edit-txn-modal').modal('toggle')
+            }
+        }
+
+        self.refundTxn = () => {
+            self.editTxnAction = "Refund"
+            if (showConfirm("Refund this whole transaction?")) {
+                $('#edit-txn-modal').modal('toggle')
+                $('#supervisor-login-modal').modal('toggle')
+
+                self.txnRevisions([])
+            }
+        }
+
+        self.confirmEditTxn = () => {
+            self.editTxnAction = "Revision"
+            if (showConfirm("Save changes to this transaction?")) {
+                $('#edit-txn-modal').modal('toggle')
+                $('#supervisor-login-modal').modal('toggle')
+            }
+        }
+
+        loginForm.addEventListener('submit', e => {
+            e.preventDefault()
+            
+            let username = $('#login-username').val()
+            let password = $('#login-password').val()
+
+            // Verify user
+            if (self.currentUser().UserName() == username) {
+                ipcRenderer.send('notif:send', {
+                    title: 'Error:',
+                    message: 'You cannot approve your own transaction revision!',
+                    type: 'error'
+                })
+            } else {
+                db.get(`SELECT rowid, pass, roleid FROM USER WHERE user = '${username}'`, async(err, user) => {
+                    if(err) {
+                        console.log(err)
+                    }
+                    else {
+                        if (user.roleid == 2) {
+                            ipcRenderer.send('notif:send', {
+                                title: "Unauthorized!",
+                                message: 'A supervisor / manager / admin must approve this revision!',
+                                type: 'error'
+                            })
+                        } else {
+                            bcrypt.compare(password, user.pass)
+                            .then(res => {
+                                if (!res) {
+                                    ipcRenderer.send('notif:send', {
+                                        title: "Oh no!",
+                                        message: 'Password is incorrect!',
+                                        type: 'error'
+                                    })
+                                }
+        
+                                return res
+                            })
+                            .then(res => {
+                                if (res) {
+                                    $('#supervisor-login-modal').modal('toggle')
+                                    self.saveEditTxn(user.rowid)
+                                } 
+                            })
+                        }
+                    }
+                })
+
+            }
+        })
+
+        self.saveEditTxn = (approver) => {
+            let affectedSales = ko.utils.arrayFilter(self.salesRecords(), (item, index) => {
+                return item.tid = self.editedTxnId
+            })
+            let saleDifference = 0
+            let changes = ""
+
+            // Revise each Sales Record
+            ko.utils.arrayForEach(affectedSales, (sale, index) => {
+                let revision = ko.utils.arrayFirst(self.txnRevisions(), (rev, i) => {
+                    return rev.RowId() == sale.rowid
+                })
+
+                if (revision) {
+                    if (sale.saleqty != revision.SaleQty()) {
+                        let diff = 0
+                        console.log(`${revision.ProdName()} changed from ${sale.saleqty} to ${revision.SaleQty()}`)
+                        console.log(`${revision.ProdName()} changed from ${sale.saleprice} to ${revision.SalePrice()}`)
+                        changes += `${revision.ProdName()}: qty bought changed from ${sale.saleqty} to ${revision.SaleQty()}; `
+                        
+                        diff = sale.saleqty - revision.SaleQty()
+                        saleDifference += sale.saleprice - revision.SalePrice()
+                        sale.saleqty = revision.SaleQty()
+                        sale.saleprice = revision.SalePrice()
+                        
+                        // Update Sales Record
+                        let updStmt = db.prepare(`UPDATE SALES_RECORD SET saleqty = ?, saleprice = ? WHERE rowid = ?`)
+                        updStmt.run(revision.SaleQty(), revision.SalePrice(), sale.rowid)
+                        updStmt.finalize()
+                        
+                        // Return the difference to the inventory
+                        if (diff > 0) {
+                            // Update database
+                            let returnStmt = db.prepare(`UPDATE PRODUCT SET pqty = pqty + ? WHERE rowid = ?`)
+                            returnStmt.run(diff, sale.pid)
+                            returnStmt.finalize()
+
+                            // Update UI
+                            let product = ko.utils.arrayFirst(self.products(), (product, pIndex) => {
+                                return product.RowId() == sale.pid
+                            })
+                            product.ProdQty(product.ProdQty() + diff)
+                        }
+                    }
+                } else {
+                    console.log(`Refund ${sale.pname}`)
+                    changes += `${sale.saleqty} units of ${sale.pname} entirely refunded; `
+                    saleDifference += sale.saleprice
+
+                    // Return to inventory
+                    // Update database
+                    let returnStmt = db.prepare(`UPDATE PRODUCT SET pqty = pqty + ? WHERE rowid = ?`)
+                    returnStmt.run(sale.saleqty, sale.pid)
+                    returnStmt.finalize()
+
+                    // Update UI
+                    let product = ko.utils.arrayFirst(self.products(), (product, pIndex) => {
+                        return product.RowId() == sale.pid
+                    })
+                    product.ProdQty(product.ProdQty() + sale.saleqty)
+
+                    // Delete Sales Record
+                    let deleteStmt = db.prepare(`DELETE FROM SALES_RECORD WHERE rowid = ?`)
+                    deleteStmt.run(sale.rowid)
+                    deleteStmt.finalize()
+                }
+            })
+
+            // If there are any changes
+            if (saleDifference > 0) {
+                // Reflect changes in Transaction record
+                let transaction = ko.utils.arrayFirst(self.transactions(), (txn, tindex) => {
+                    return txn.RowId() == self.editedTxnId
+                })
+                transaction.TotalSales(transaction.TotalSales() - saleDifference)
+                transaction.Change(transaction.Change() + saleDifference)
+
+                let txnStatus = (self.editTxnAction == 'Refund' || transaction.TotalSales() == 0) ? "Refunded" : "Revised"
+                let ledgerStatus = (self.editTxnAction == 'Refund' || transaction.TotalSales() == 0) ? "Refund" : "Revision"
+
+                let updTxnStmt = db.prepare(`UPDATE TRANSACTION_RECORD SET totalsales = ?, change = ?, status = ? WHERE rowid = ?`)
+                updTxnStmt.run(transaction.TotalSales(), transaction.Change(), txnStatus, self.editedTxnId)
+                updTxnStmt.finalize()
+
+                // Log change in Transaction Change Ledger
+                let currentDate = new moment().format('YYYY-MM-DDTHH:mm:ss')
+                let createLedgerStmt = db.prepare(`INSERT INTO TXN_CHANGE_LEDGER(tcdate, changetype, changedby, approvedby, changes, oldtotal, newtotal, tid) 
+                                                    VALUES(?, ?, ?, ?, ?, ?, ?, ?)`)
+                createLedgerStmt.run(currentDate, ledgerStatus, currentUserId, approver, changes, transaction.TotalSales() + saleDifference, transaction.TotalSales(), self.editedTxnId)
+                createLedgerStmt.finalize()
+            }
+
+            ipcRenderer.send('notif:send', {
+                title: 'Success!',
+                message: 'Transaction record revised.'
+            })
+        }
+
+        self.cancelEditTxn = () => {
+            self.txnRevisions([])
+            self.editedTxnId = 0
+
+            $('#edit-txn-modal').modal('toggle')
         }
 
         self.getTotalSales = ko.computed(function() {

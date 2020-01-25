@@ -1,6 +1,8 @@
 function Category(id, name) {
     this.RowId = ko.observable(id)
     this.Name  = ko.observable(name)
+    
+    this.IsEditing = ko.observable(false)
     this.Icon  = () => {
         switch (this.RowId()) {
             case 1:
@@ -18,9 +20,23 @@ function Category(id, name) {
         }
     }
 
-    this.filterCategories = function() {
+    this.filterCategories = () => {
         $('#selected-category').val(this.RowId())
         $('#select-category-trigger-btn').click()
+    }
+
+    this.editCategory = () => {
+        this.IsEditing(!this.IsEditing())
+    }
+
+    this.saveEditCategory = () => {
+        this.IsEditing(!this.IsEditing())
+        this.Name($('#category-' + this.RowId()).val())
+
+        ipcRenderer.send('notif:send', {
+            title: 'Success!',
+            message: 'Category successfully renamed.'
+        })
     }
 }
 
