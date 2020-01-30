@@ -1,6 +1,6 @@
 // Set environment variables
-//process.env.NODE_ENV = 'production'
-process.env.GITHUB_TOKEN = '14346e52a2c949917c28d125f076f0d7acec936b'
+process.env.NODE_ENV = 'production'
+process.env.GITHUB_TOKEN = 'fde2ed180dc8ef52a4d1e7b6f78a0be04315e38b'
 
 // Requires
 const { app, BrowserWindow, Menu, ipcMain, dialog, autoUpdater } = require('electron')
@@ -46,7 +46,7 @@ const createWindow = () => {
   }))
 
   // Open the DevTools.
-    mainWindow.webContents.openDevTools();
+  // mainWindow.webContents.openDevTools();
 
   // auto-update
   if (!isDev) {

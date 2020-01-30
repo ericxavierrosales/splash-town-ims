@@ -15,6 +15,7 @@ const Category      = require('../src/js/Category')
 const Product       = require('../src/js/Product')
 const Sale          = require('../src/js/Sale')
 const Transaction   = require('../src/js/Transaction')
+const onScan        = require('onscan.js/onScan')
 
 const {ipcRenderer} = electron
 const {dialog}      = electron.remote
@@ -29,8 +30,6 @@ const txnFilterForm = document.querySelector('#filter-txn-form')
 const loginForm     = document.querySelector('#supervisor-login-form')
 const saltRounds    = 10
 const db            = new sqlite3.Database(path.join(__dirname, 'db/inventory.db'))
-
-const onScan        = require('onscan.js/onscan')
 
 let currentUserId
 
@@ -48,6 +47,7 @@ $(document).ready(function() {
         self.pageTitle   = "Splash Town"
         self.currentUser = ko.observable()
         
+        // Observable arrays
         self.users            = ko.observableArray([])
         self.categories       = ko.observableArray([])
         self.products         = ko.observableArray([])
@@ -98,8 +98,10 @@ $(document).ready(function() {
         })
 
         // Non-observables
-        self.editedTxnId     = 0
-        self.editTxnAction   = ""
+        self.editedTxnId      = 0
+        self.editTxnAction    = ""
+        self.invChangeType    = ""
+        self.invChangeProduct = {}
 
         // Datepicker
         const frSRPicker = datepicker('#sr-frdate', {
@@ -141,7 +143,7 @@ $(document).ready(function() {
 
             // Products Table
             self.srFilterProducts.push(new Product(0, 0, 'All', 0, 'All', 0 ,0))
-            db.each(`SELECT p.rowid, p.pnumber, p.pname, p.category, c.name, p.pqty, p.pprice FROM PRODUCT p, CATEGORY c WHERE p.category = c.rowid ORDER BY p.pname`, (err, row) => {
+            db.each(`SELECT p.rowid, p.pnumber, p.pname, p.category, c.name, p.pqty, p.pprice FROM PRODUCT p, CATEGORY c WHERE p.category = c.rowid AND p.isactive = TRUE ORDER BY p.pname`, (err, row) => {
                 self.products.push(new Product(row.rowid, row.pnumber, row.pname, row.category, row.name, row.pqty, row.pprice))
                 self.srFilterProducts.push(new Product(row.rowid, row.pnumber, row.pname, row.category, row.name, row.pqty, row.pprice))
             });
@@ -440,36 +442,177 @@ $(document).ready(function() {
 
         restockForm.addEventListener('submit', function(e) {
             e.preventDefault()
-            if (showConfirm('Are you sure?')) {
-                let rowId = $('#restock-row-id').val()
-                let addqty = parseFloat($('#restock-qty').val())
-                let currDateTime = new moment().format('YYYY-MM-DDTHH:mm:ss')
-                let updatedProduct = ko.computed(function() {
-                    return ko.utils.arrayFirst(self.products(), (product) => {
-                        return product.RowId() == rowId
-                    })
+            $('#restock-modal').modal('toggle')
+            if (self.invChangeType == "UNLOAD" && $('#restock-qty').val() > self.invChangeProduct.ProdQty()) {
+                showNotification({
+                    title: "Error!",
+                    message: "Quantity to unload exceeds quantity of product on-hand!",
+                    type: 'error'
                 })
-                let oldqty = parseFloat(updatedProduct().ProdQty())
-                let totalqty = oldqty + addqty
-                updatedProduct().ProdQty(totalqty)
-    
+            } else {
+                if (showConfirm('Are you sure?')) {
+                    $('#reason-modal').modal('toggle')
+                }
+            }
+        })
+
+        self.restockRow = (product) => {
+            self.invChangeType = "RESTOCK"
+            self.invChangeProduct = product
+            $('#restock-modal').modal('toggle')
+            $('#restock-qty').val(null)
+        }
+
+        self.unloadRow = (product) => {
+            self.invChangeType = "UNLOAD"
+            self.invChangeProduct = product
+            $('#restock-modal').modal('toggle')
+            $('#restock-qty').val(null)
+        }
+
+        self.confirmDiscontinue = (product) => {
+            if (showConfirm("Discontinue this product?")) {
+                $('#reason-modal').modal('toggle')
+                self.invChangeType = "DISCONTINUE"
+                self.invChangeProduct = product
+            }
+        }
+
+        self.discontinueProduct = (product, reason) => {
+            self.products.remove(p => {
+                return product.RowId() == p.RowId()
+            })
+            self.srFilterProducts.remove(p => {
+                return product.RowId() == p.RowId()
+            })
+
+            db.serialize(() => {
+                let currDateTime = new moment().format('YYYY-MM-DDTHH:mm:ss')
+                let updStmt = db.prepare(`UPDATE PRODUCT SET pqty = 0, isactive = FALSE WHERE rowid = ?`)
+                updStmt.run(product.RowId())
+                updStmt.finalize()
+
+                let recordStmt
+                recordStmt = db.prepare(`INSERT INTO INVENTORY_LEDGER(scdate, pid, changedby, oldcount, newcount, reason) VALUES(?, ?, ?, ?, ?, ?)`)
+                recordStmt.run(currDateTime, product.RowId(), currentUserId, product.ProdQty(), 0, reason)
+                recordStmt.finalize()
+            })
+            
+            showNotification({
+                title: 'Success',
+                message: 'Product has been discontinued and removed from the inventory'
+            })
+        }
+
+        self.restockProduct = (product, reason) => {  
+            let addqty = parseFloat($('#restock-qty').val())
+            let currDateTime = new moment().format('YYYY-MM-DDTHH:mm:ss')
+            let oldqty = parseFloat(product.ProdQty())
+            let totalqty = oldqty + addqty
+            product.ProdQty(totalqty)
+
+            db.serialize(() => {
                 // Update Products table
                 let updStmt = db.prepare(`UPDATE PRODUCT SET pqty = ? WHERE rowid = ?`)
-                updStmt.run(totalqty, rowId)
+                updStmt.run(totalqty, product.RowId())
                 updStmt.finalize()
     
                 // Update Inventory ledger table
                 let recordStmt = db.prepare(`INSERT INTO INVENTORY_LEDGER(scdate, pid, changedby, oldcount, newcount, reason) VALUES(?, ?, ?, ?, ?, ?)`)
-                recordStmt.run(currDateTime, rowId, currentUserId, oldqty, totalqty, 'Restocking')
+                recordStmt.run(currDateTime, product.RowId(), currentUserId, oldqty, totalqty, reason)
+                recordStmt.finalize()
+            })
+
+            showNotification({
+                title: 'Success!',
+                message: 'Product succesfully re-stocked.'
+            })
+        }
+
+        self.unloadProduct = (product, reason) => {
+            let subqty = parseFloat($('#restock-qty').val())
+            let currDateTime = new moment().format('YYYY-MM-DDTHH:mm:ss')
+            let oldqty = parseFloat(product.ProdQty())
+            let totalqty = oldqty - subqty
+            product.ProdQty(totalqty)
+
+            db.serialize(() => {
+                // Update Products table
+                let updStmt = db.prepare(`UPDATE PRODUCT SET pqty = ? WHERE rowid = ?`)
+                updStmt.run(totalqty, product.RowId())
+                updStmt.finalize()
+    
+                // Update Inventory ledger table
+                let recordStmt = db.prepare(`INSERT INTO INVENTORY_LEDGER(scdate, pid, changedby, oldcount, newcount, reason) VALUES(?, ?, ?, ?, ?, ?)`)
+                recordStmt.run(currDateTime, product.RowId(), currentUserId, oldqty, totalqty, reason)
+                recordStmt.finalize()
+            })
+
+            showNotification({
+                title: 'Success!',
+                message: 'Product succesfully unloaded.'
+            })
+
+        }
+
+        self.confirmEditProduct = (product) => {
+            if (showConfirm("Save changes?")) {
+                self.invChangeType = "EDIT"
+                self.invChangeProduct = product
+                $('#reason-modal').modal('toggle')
+            }
+        }
+
+        self.saveEdit = (product, reason) => {
+            let oldname = product.ProdName()
+            let newname = $('#pname-' + product.RowId()).val()
+            let oldprice = product.ProdPrice()
+            let newprice = $('#pprice-' + product.RowId()).val()
+            let oldcateg = product.Category()
+            let newcateg = $('#pcat-' + product.RowId()).val()
+    
+            if ((newname != oldname || newprice != oldprice || newcateg != oldcateg)) {
+                let currDateTime = new moment().format('YYYY-MM-DDTHH:mm:ss')
+                product.ProdName(newname)
+                product.ProdPrice(newprice)
+                product.Category(newcateg)
+        
+                let updStmt = db.prepare(`UPDATE PRODUCT SET pname = ?, pprice = ?, category = ? WHERE rowid = ?`)
+                updStmt.run(product.ProdName(), product.ProdPrice(), product.Category(), product.RowId())
+                updStmt.finalize()
+    
+                // Update Inventory ledger table
+                let recordStmt
+                if (newname != oldname && newprice != oldprice) {
+                    recordStmt = db.prepare(`INSERT INTO INVENTORY_LEDGER(scdate, pid, changedby, olddesc, newdesc, oldprice, newprice, reason) VALUES(?, ?, ?, ?, ?, ?, ?, ?)`)
+                    recordStmt.run(currDateTime, product.RowId(), currentUserId, oldname, newname, oldprice, newprice, reason)
+                }
+                else if (newname != oldname && newprice == oldprice) {
+                    recordStmt = db.prepare(`INSERT INTO INVENTORY_LEDGER(scdate, pid, changedby, olddesc, newdesc, reason) VALUES(?, ?, ?, ?, ?, ?)`)
+                    recordStmt.run(currDateTime, product.RowId(), currentUserId, oldname, newname, reason)
+                }
+                else if (newname == oldname && newprice != oldprice) {
+                    recordStmt = db.prepare(`INSERT INTO INVENTORY_LEDGER(scdate, pid, changedby, oldprice, newprice, reason) VALUES(?, ?, ?, ?, ?, ?)`)
+                    recordStmt.run(currDateTime, product.RowId(), currentUserId, oldprice, newprice, reason)
+                }
+                else if (oldcateg != newcateg) {
+                    recordStmt = db.prepare(`INSERT INTO INVENTORY_LEDGER(scdate, pid, changedby, reason) VALUES(?, ?, ?, ?)`)
+                    recordStmt.run(currDateTime, product.RowId(), currentUserId, reason)
+                }
                 recordStmt.finalize()
     
                 ipcRenderer.send('notif:send', {
                     title: 'Success!',
-                    message: 'Product succesfully re-stocked.'
+                    message: 'Product details successfully updated!'
                 })
-                $('#restock-modal').modal('toggle')
             }
-        })
+            else {
+                $('#pname-' + product.RowId()).val(product.ProdName())
+                $('#pprice-' + product.RowId()).val(product.ProdPrice())
+                $('#pcat-' + product.RowId()).val(product.Category())
+            }
+            product.IsEnabled(!product.IsEnabled())
+        }
 
         self.uploadInventoryFile = () => {
             let file = dialog.showOpenDialogSync(null)
@@ -517,7 +660,7 @@ $(document).ready(function() {
                     }
                 })
     
-                ipcRenderer.send('notif:send', {    
+                showNotification({    
                     title: 'Success!',
                     message: `Added ${addedProductsCount} new products to the inventory!`
                 })
@@ -551,7 +694,7 @@ $(document).ready(function() {
                 XLSX.utils.book_append_sheet(wb, ws)
                 XLSX.writeFile(wb, file)
     
-                ipcRenderer.send('notif:send', {
+                showNotification({
                     title: 'Success!',
                     message: 'Successfully exported inventory file.'
                 })
@@ -600,11 +743,29 @@ $(document).ready(function() {
                     return category.RowId() == data.RowId()
                 })
 
-                ipcRenderer.send('notif:send', {
+                showNotification({
                     title: 'Success!',
                     message: `Category - ${data.Name()} successfully removed.`
                 })  
             }
+        }
+
+        self.processInvChange = () => {
+            let reason = $('#change-reason').val()
+            if (self.invChangeType == "DISCONTINUE") {
+                self.discontinueProduct(self.invChangeProduct, reason)
+            } else if (self.invChangeType == "RESTOCK") {
+                self.restockProduct(self.invChangeProduct, reason)
+            } else if (self.invChangeType == "UNLOAD") {
+                self.unloadProduct(self.invChangeProduct, reason)
+            } else if (self.invChangeType == "EDIT") {
+                self.saveEdit(self.invChangeProduct, reason)
+            }
+
+            $('#reason-modal').modal('toggle')
+            $('#change-reason').val("")
+            self.invChangeType = ""
+            self.invChangeProduct = {}
         }
 
         // Sales functions
@@ -616,6 +777,7 @@ $(document).ready(function() {
             self.isPOSActive(false)
         })
 
+
         onScan.attachTo(document, {
             suffixKeyCodes: [13],
             onScan: (sCode, iQty) => {
@@ -624,13 +786,21 @@ $(document).ready(function() {
                         return product.ProdNum() == sCode
                     })
     
-                    $('#sales-prod-id').val(prod.RowId())
-                    $('#sales-prod-qty').val(1)
-                    self.addProduct()
+                    if (prod != null) {
+                        $('#sales-prod-id').val(prod.RowId())
+                        $('#sales-prod-qty').val(1)
+                        self.addProduct()
+                    } else {
+                        showNotification({
+                            title: "Warning!",
+                            message: 'This product does not exist in the Inventory!',
+                            type: 'info'
+                        })
+                    }
                 }
             }
         })
-
+        
         self.addProduct = () => {
             let prodId = $('#sales-prod-id').val()
             let saleQty = parseFloat($('#sales-prod-qty').val())
@@ -660,7 +830,7 @@ $(document).ready(function() {
                     $('#sales-prod-qty').val('')
                 }
                 else {
-                    ipcRenderer.send('notif:send', {
+                    showNotification({
                         title: "Oh no!",
                         message: 'Not enough available product!',
                         type: 'error'
@@ -771,7 +941,7 @@ $(document).ready(function() {
                             recordSaleStmt.run(currentDateTime, pid, pname, row.id, sprice, pqty)
                         }
                         
-                        ipcRenderer.send('notif:send', {
+                        showNotification({
                             title: 'Success!',
                             message: 'Transaction successful. Thank you!'
                         })
@@ -783,7 +953,7 @@ $(document).ready(function() {
                 }
             }
             else {
-                ipcRenderer.send('notif:send', {
+                showNotification({
                     title: "Oh no!",
                     message: 'Insufficient payment!',
                     type: 'error'
@@ -792,7 +962,7 @@ $(document).ready(function() {
         })
 
         self.printReceipt = function() {
-            ipcRenderer.send('notif:send', {
+            showNotification({
                 title: "Thank you!",
                 message: 'Printing receipt...',
                 type: 'info'
@@ -853,7 +1023,7 @@ $(document).ready(function() {
 
             // Verify user
             if (self.currentUser().UserName() == username) {
-                ipcRenderer.send('notif:send', {
+                showNotification({
                     title: 'Error:',
                     message: 'You cannot approve your own transaction revision!',
                     type: 'error'
@@ -865,7 +1035,7 @@ $(document).ready(function() {
                     }
                     else {
                         if (user.roleid == 2) {
-                            ipcRenderer.send('notif:send', {
+                            showNotification({
                                 title: "Unauthorized!",
                                 message: 'A supervisor / manager / admin must approve this revision!',
                                 type: 'error'
@@ -874,7 +1044,7 @@ $(document).ready(function() {
                             bcrypt.compare(password, user.pass)
                             .then(res => {
                                 if (!res) {
-                                    ipcRenderer.send('notif:send', {
+                                    showNotification({
                                         title: "Oh no!",
                                         message: 'Password is incorrect!',
                                         type: 'error'
@@ -988,7 +1158,7 @@ $(document).ready(function() {
                 createLedgerStmt.finalize()
             }
 
-            ipcRenderer.send('notif:send', {
+            showNotification({
                 title: 'Success!',
                 message: 'Transaction record revised.'
             })
@@ -1039,7 +1209,7 @@ $(document).ready(function() {
                 self.stockRecords.push(row)
             })
 
-            ipcRenderer.send('notif:send', {
+            showNotification({
                 title: 'Success!',
                 message: 'Stock Ledger records refreshed.'
             })
@@ -1111,7 +1281,7 @@ $(document).ready(function() {
                 self.salesByProduct.push(row)
             })
 
-            ipcRenderer.send('notif:send', {
+            showNotification({
                 title: 'Success!',
                 message: 'Sales Records refreshed.'
             })
@@ -1167,7 +1337,7 @@ $(document).ready(function() {
         self.addNewUser = function() {
             let formValues = $('#add-user-form').serializeArray()
             if (formValues[3].value != formValues[4].value) {
-                ipcRenderer.send('notif:send', {
+                showNotification({
                     title: "Oh no!",
                     message: 'Passwords do not match!',
                     type: 'error'
@@ -1184,7 +1354,7 @@ $(document).ready(function() {
                     })
                 });
 
-                ipcRenderer.send('notif:send', {
+                showNotification({
                     title: 'Success!',
                     message: 'New user added.'
                 })
@@ -1209,14 +1379,14 @@ $(document).ready(function() {
                     bcrypt.compare(oldPwd, user.pass)
                     .then(res => {
                         if (!res) {
-                            ipcRenderer.send('notif:send', {
+                            showNotification({
                                 title: "Oh no!",
                                 message: 'Password is incorrect!',
                                 type: 'error'
                             })
                         }
                         else if (res && newPw1!=newPw2) {
-                            ipcRenderer.send('notif:send', {
+                            showNotification({
                                 title: "Oh no!",
                                 message: 'Passwords do not match!',
                                 type: 'error'
@@ -1232,7 +1402,7 @@ $(document).ready(function() {
                                 updStmt.run(hash, currentUserId)
                                 updStmt.finalize()
 
-                                ipcRenderer.send('notif:send', {
+                                showNotification({
                                     title: "Success!",
                                     message: 'Password changed successfully!',
                                     type: 'info'
@@ -1259,5 +1429,13 @@ function showConfirm(message) {
         title: 'Are you sure?',
         message: message,
         buttons: ['No', 'Yes']
+    })
+}
+
+function showNotification(message) {
+    ipcRenderer.send('notif:send', {
+        title: message.title,
+        message: message.message,
+        type: message.type
     })
 }

@@ -319,7 +319,7 @@
                         <div class='col-md form-group' style='padding: 0% 5%'>
                             <input type='hidden' id='restock-row-id' value=0 />
 
-                            <label for='restock-qty'>Incoming Stock Quantity</label>
+                            <label for='restock-qty'>Quantity</label>
                             <input type='number' id='restock-qty' class='form-control' placeholder='Enter qty' />
                           <br>
                           <input type='submit' class='btn btn-success form-control' id='restock-save-btn' value='OK' />
@@ -389,6 +389,32 @@
                 </div>
               </div>
             </div>
+            <!-- REASON MODAL -->
+            <div class='modal fade' id='reason-modal'>
+              <div class="modal-dialog modal-dialog-centered" role="document">
+                <div class="modal-content">
+                  <div class="modal-header" style='padding:1%'>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                      <span aria-hidden="true">&times;</span>
+                    </button>
+                  </div>
+                  <div class="modal-body">
+                    <form id='restock-form'>
+                      <div class='row'>
+                        <div class='col-md form-group' style='padding: 0% 5%'>
+                            <input type='hidden' id='reason-row-id' value=0 />
+
+                            <label for='change-reason'>Reason / Details</label>
+                            <textarea id='change-reason' class='form-control' rows=5 placeholder='Enter details / reason of change'></textarea>
+                          <br>
+                          <button type='button' class='btn btn-success form-control' id='confirm-reason-btn' data-bind='click:processInvChange'>OK</button>
+                        </div>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            </div>
 
             <!-- Search Product Form -->
             <form id='search-form'>
@@ -433,7 +459,7 @@
                     <th>Product Description</th>
                     <th>Unit Price</th>
                     <th>Available Qty</th>
-                    <th style='text-align: center' width=20%>Actions</th>
+                    <th style='text-align: center' width=15%>Actions</th>
                   </tr>
                 </thead>
                 <tbody id='item-table-tbody' class='table-tbody' data-bind='foreach:filterProducts'>
@@ -451,11 +477,25 @@
                       <input type='text' class='form-control' data-bind='attr:{value:parseFloat(ProdPrice()).toFixed(2), id:"pprice-"+RowId()}, enable:IsEnabled()' />
                     </td>
                     <td data-bind='text:ProdQty()'></td>
-                    <td width=15% style='text-align: center'>
-                      <button type='button' class='btn btn-dark edit-item-btn' data-bind='click:editRow, visible:!IsEnabled() && !IsRestock()'>Edit</button>
-                      <button type='button' class='btn btn-dark save-changes-btn' data-bind='click:saveEdit, visible:IsEnabled()'>Save</button>
-                      <button type='button' class='btn btn-dark restock-btn' data-bind='click:restockRow, visible:!IsEnabled() && !IsRestock()'>Restock</button>
-                      <button type='button' class='btn btn-dark cancel-changes-btn' data-bind='click:cancelAction, visible:IsEnabled() || IsRestock()'>Cancel</button>
+                    <td style='text-align: right'>
+                      <button type='button' class='btn btn-outline-success save-changes-btn' data-bind='click:$root.confirmEditProduct, visible:IsEnabled()' data-toggle='tooltip' title='Save'>
+                        <i class='fas fa-check'></i>
+                      </button>
+                      <button type='button' class='btn btn-outline-danger cancel-changes-btn' data-bind='click:cancelAction, visible:IsEnabled() || IsRestock()' data-toggle='tooltip' title='Cancel'>
+                        <i class='fas fa-times'></i>
+                      </button>
+                      <button type='button' class='btn btn-success restock-btn' data-bind='click:$root.restockRow, visible:!IsEnabled() && !IsRestock()' data-toggle='tooltip' title='Re-Stock'>
+                        <i class='fas fa-plus-circle'></i>
+                      </button>
+                      <button type='button' class='btn btn-danger restock-btn' data-bind='click:$root.unloadRow, visible:!IsEnabled() && !IsRestock()' data-toggle='tooltip' title='Unload'>
+                        <i class='fas fa-minus-circle'></i>
+                      </button>
+                      <button type='button' class='btn btn-dark edit-item-btn' data-bind='click:editRow, visible:!IsEnabled() && !IsRestock()' data-toggle='tooltip' title='Edit'>
+                        <i class='fas fa-edit'></i>
+                      </button>
+                      <button type='button' class='btn btn-warning discontinue-btn' data-bind='click:$root.confirmDiscontinue, visible:!IsEnabled() && !IsRestock()' data-toggle='tooltip' title='Discontinue'>
+                        <i class='fas fa-trash-alt'></i>
+                      </button>
                     </td>
                   </tr>
                 </tbody>
@@ -1018,7 +1058,7 @@
                       <td data-bind='text:UserName()'></td>
                       <td data-bind='text:RoleName()'></td>
                       <td>
-                        <span>Something</span>
+                        
                       </td>
                     </tr>
                   </tbody>
