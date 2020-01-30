@@ -15,7 +15,7 @@ const Category      = require('../src/js/Category')
 const Product       = require('../src/js/Product')
 const Sale          = require('../src/js/Sale')
 const Transaction   = require('../src/js/Transaction')
-const onScan        = require('onscan.js/onScan')
+const onScan        = require('../src/js/onscan.js/onScan')
 
 const {ipcRenderer} = electron
 const {dialog}      = electron.remote
