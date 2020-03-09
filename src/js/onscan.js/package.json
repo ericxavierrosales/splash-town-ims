@@ -1,0 +1,62 @@
+{
+  "_from": "onscan.js@^1.3.2",
+  "_id": "onscan.js@1.3.2",
+  "_inBundle": false,
+  "_integrity": "sha512-lln3SNr6f1uAuubduZSf2192Riu1D47CgZLJp4QM5H0SEmpKqzVZgs8+JksSMSAXOOjWYglhj0PGbMvfqUl7ag==",
+  "_location": "/onscan.js",
+  "_phantomChildren": {},
+  "_requested": {
+    "type": "range",
+    "registry": true,
+    "raw": "onscan.js@^1.3.2",
+    "name": "onscan.js",
+    "escapedName": "onscan.js",
+    "rawSpec": "^1.3.2",
+    "saveSpec": null,
+    "fetchSpec": "^1.3.2"
+  },
+  "_requiredBy": [
+    "#USER",
+    "/"
+  ],
+  "_resolved": "https://registry.npmjs.org/onscan.js/-/onscan.js-1.3.2.tgz",
+  "_shasum": "edb438bb0cdb17590c4bd2f11a5124b9a056ee4b",
+  "_spec": "onscan.js@^1.3.2",
+  "_where": "C:\\Users\\eric.x.c.rosales\\Documents\\_WORK_FILES\\Electron\\forge-sample\\splash-town-ims",
+  "author": {
+    "name": "Andrej Kabachnik"
+  },
+  "bugs": {
+    "url": "https://github.com/axenox/onscan.js/issues"
+  },
+  "bundleDependencies": false,
+  "contributors": [
+    {
+      "name": "Andrej Kabachnik"
+    },
+    {
+      "name": "Thomas Michael"
+    }
+  ],
+  "deprecated": false,
+  "description": "Framework agnostic onScan event fired when using hardware barcode scanners",
+  "homepage": "https://github.com/axenox/onscan.js/",
+  "keywords": [
+    "barcodescanner",
+    "scanner",
+    "barcode",
+    "barcodes",
+    "RFID",
+    "RFIDscanner",
+    "vanilla JavaScript",
+    "vanilla js"
+  ],
+  "license": "MIT",
+  "main": "onscan.js",
+  "name": "onscan.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/axenox/onscan.js.git"
+  },
+  "version": "1.3.2"
+}

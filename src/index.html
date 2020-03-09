@@ -72,63 +72,71 @@
               <input type='button' id='select-category-trigger-btn' style='display:none' />
               <!-- Search and Categories -->
               <div class='row'>
-                <div class='col-sm-6'></div>
+                <!-- Toggle POS Mode buttons -->
+                <div class='col-sm-6'>
+                  <!-- 
+                  <nav>
+                    <div class='nav nav-pills nav-justified' id='pos-mode-tab' role='tablist'>
+                        <button class='btn btn-outline-secondary category-btn nav-item nav-link active' data-toggle='tab' id='nav-selection-tab' href='#nav-selection' role='tab' aria-controls='nav-selection' aria-selected='true'>
+                          <i class='fas fa-hand-pointer'></i> &nbsp; Selection Mode
+                        </button>
+                        <button class='btn btn-outline-secondary category-btn nav-item nav-link' data-toggle='tab' id='nav-scan-tab' href='#nav-scan' role='tab' aria-controls='nav-scan' aria-selected='false'>
+                          <i class='fas fa-barcode'></i> &nbsp; Scan Mode
+                        </button>
+                    </div>
+                  </nav>
+                  -->
+                </div>
+                <!-- Product search bar -->
                 <div class='col-sm-6 form-group'>
                   <form id='sales-search-form'>
-                  <div class="input-group mb-3 dropdown" id='sales-search-bar'>
-                    <input type='text' id='sales-search-input' class='prod-search-bar form-control dropdown-toggle' placeholder='Search products' />
-                    <div class="input-group-append">
-                      <button class="btn btn-outline-secondary" type="submit" id="sales-search-btn">
-                        <i class='fas fa-search'></i>
-                      </button>
+                    <div class="input-group mb-3 dropdown" id='sales-search-bar'>
+                      <input type='text' id='sales-search-input' class='prod-search-bar form-control dropdown-toggle' placeholder='Search products' />
+                      <div class="input-group-append">
+                        <button class="btn btn-outline-secondary" type="submit" id="sales-search-btn">
+                          <i class='fas fa-search'></i>
+                        </button>
+                      </div>
+                      <div class="dropdown-menu" id='autocomplete-dd' aria-labelledby="sales-search-input" data-bind='foreach:filterProductsDynamic'>
+                        <a class="dropdown-item" href="#" data-bind='text:ProdNum()+" - "+ProdName(), click:selectSalesRow'></a>
+                      </div>
                     </div>
-                    <div class="dropdown-menu" id='autocomplete-dd' aria-labelledby="sales-search-input" data-bind='foreach:filterProductsDynamic'>
-                      <a class="dropdown-item" href="#" data-bind='text:ProdName(), click:selectSalesRow'></a>
-                    </div>
-                  </div>
                   </form>
                 </div>
               </div>
-              <nav>
-                <div class='nav nav-pills nav-justified' id='sort-product-tab' role='tablist' data-bind='foreach:categories'>
-                  <button class='btn btn-outline-info category-btn nav-item' data-bind='attr:{id:"nav-cat-tab-"+RowId()}, click:filterCategories'>
-                    <i data-bind='attr:{class:Icon()}'></i> &nbsp; <span data-bind='text:Name()'></span>
-                  </button>
+
+              <div class='tab-content' id='pos-mode-tabContent'>
+                <!-- ITEMS LIST -->
+                <div class='tab-pane fade show active' id='nav-selection' role='tabpanel' aria-labelledby='nav-selection-tab'>
+                  <nav>
+                    <div class='nav nav-pills nav-justified' id='sort-product-tab' role='tablist' data-bind='foreach:categories'>
+                      <button class='btn btn-outline-info category-btn nav-item' data-bind='attr:{id:"nav-cat-tab-"+RowId()}, click:filterCategories'>
+                        <i data-bind='attr:{class:Icon()}'></i> &nbsp; <span data-bind='text:Name()'></span>
+                      </button>
+                    </div>
+                  </nav>
+                  <div class='table-container-lg-nomin d-flex align-content-start flex-wrap' style='border-top: 1px solid #ddd' data-bind='foreach:filterSaleProducts'>
+                    <button class='item-box d-flex flex-column btn btn-info' data-bind='click:selectSalesRow'>
+                      <div class='mb-auto' style='text-align: left'>
+                        <h6 data-bind='text:ProdName()'></h6>
+                      </div>
+                      <div class='align-items-baseline'>
+                        <span class='item-price' data-bind='text:"P"+parseFloat(ProdPrice()).toFixed(2)'></span>
+                      </div>
+                    </button>
+                  </div>
                 </div>
-              </nav>
 
-              <!-- ITEMS LIST -->
-              <div class='table-container-lg-nomin d-flex align-content-start flex-wrap' style='border-top: 1px solid #ddd' data-bind='foreach:filterSaleProducts'>
-                <button class='item-box d-flex flex-column btn btn-info' data-bind='click:selectSalesRow'>
-                  <div class='mb-auto' style='text-align: left'>
-                    <h6 data-bind='text:ProdName()'></h6>
+                <!-- SCAN MODE SCREEN -->
+                <div class='tab-pane fade' id='nav-scan' role='tabpanel' aria-labelledby='nav-scan-tab'>
+                  <div class='row' style='padding:3.5%'>
+                    <h4>Scan Barcode</h4><br><br>
+                    <input type='text' class='form-control' id='barcode-input-field' style='line-height:20px' placeholder='Barcode #' />
+                    <br><br>
+                    <label for='barcode-prod-qty'>Quantity</label>
+                    <input type='number' class='form-control' id='barcode-prod-qty' style='line-height:20px' value=1 />
                   </div>
-                  <div class='align-items-baseline'>
-                    <span class='item-price' data-bind='text:"P"+parseFloat(ProdPrice()).toFixed(2)'></span>
-                  </div>
-                </button>
-
-                <!--
-                <table class='table sales-item-table table-hover'>
-                  <thead class='thead-dark'>
-                    <tr>
-                      <th>Product #</th>
-                      <th>Product Description</th>
-                      <th>Available Qty</th>
-                      <th>Unit Price</th>
-                    </tr>
-                  </thead>
-                  <tbody id='sales-item-table-tbody' class='table-tbody' data-bind='foreach: filterSaleProducts'>
-                    <tr data-bind="attr:{id:'table-row-'+RowId()}, click:selectSalesRow">
-                      <td data-bind='text:ProdNum()'></td>
-                      <td data-bind='text:ProdName()'></td>
-                      <td data-bind='text:ProdQty()'></td>
-                      <td data-bind='text:parseFloat(ProdPrice()).toFixed(2)'></td>
-                    </tr>
-                  </tbody>
-                </table>
-                -->
-
+                </div>
               </div>
             </div>
             <!-- Sales column -->
@@ -141,6 +149,7 @@
                         <th>Product</th>
                         <th>Qty</th>
                         <th>Sale Price</th>
+                        <th width=10%></th>
                       </tr>
                   </thead>
                   <tbody id='sales-table-tbody' class='table-tbody' data-bind='foreach:sales'>
@@ -148,6 +157,14 @@
                         <td data-bind='text:ProdName()'></td>
                         <td data-bind='text:SaleQty()'></td>
                         <td data-bind='text:SalePrice().toFixed(2)'></td>
+                        <td>
+                          <a href='#' class='sale-control-btn' style='color:#222' data-bind='click:$root.subtractSaleQty'>
+                            <span><i class='fas fa-minus-circle'></i></span>
+                          </a>
+                          <a href='#' class='sale-control-btn' style='color:red' data-bind='click:$root.removeSaleProduct'>
+                            <span><i class='fas fa-times-circle'></i></span>
+                          </a>
+                        </td>
                       </tr>
                   </tbody>
                 </table>
@@ -258,7 +275,7 @@
                         <div class='col-md form-group'>
                           <label for='prod-category'>Category</label>
                           <select id='prod-category' class='form-control' data-bind='foreach:createCategories'>
-                              <option data-bind='value:RowId(), text:Name(), visible:RowId()!=0'></option>
+                              <option data-bind='value:RowId(), text:Name, visible:RowId()!=0'></option>
                           </select>
 
                           <label for='prod-num'>Product Number</label>
@@ -302,10 +319,95 @@
                         <div class='col-md form-group' style='padding: 0% 5%'>
                             <input type='hidden' id='restock-row-id' value=0 />
 
-                            <label for='restock-qty'>Incoming Stock Quantity</label>
+                            <label for='restock-qty'>Quantity</label>
                             <input type='number' id='restock-qty' class='form-control' placeholder='Enter qty' />
                           <br>
                           <input type='submit' class='btn btn-success form-control' id='restock-save-btn' value='OK' />
+                        </div>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- Categories Modal -->
+            <div class='modal fade' id='category-modal'>
+              <div class="modal-dialog modal-lg" role="document" style='margin-top:2.5%'>
+                <div class="modal-content">
+                  <div class="modal-header" style='padding:1%'>
+                    <h5>Product Categories</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                      <span aria-hidden="true">&times;</span>
+                    </button>
+                  </div>
+                  <div class="modal-body">
+                    <table class='table table-hover'>
+                      <thead class='thead-dark'>
+                        <tr>
+                          <th width=20%>Category ID</th>
+                          <th>Icon</th>
+                          <th>Category Name</th>
+                          <th width=20%>Edit/Delete</th>
+                        </tr>
+                      </thead>
+                      <tbody class='table-tbody' data-bind='foreach:createCategories'>
+                        <tr>
+                          <td data-bind='text:RowId'></td>
+                          <td>
+                            <span><i data-bind='attr:{class:Icon()}'></i></span>
+                          </td>
+                          <td>
+                            <input type='text' class='form-control' data-bind='attr:{value:Name, id:"category-"+RowId()}, enable:IsEditing()' />
+                          </td>
+                          <td>
+                            <a href='#' class='sale-control-btn' style='color:#222' data-bind='click:editCategory, visible:!IsEditing()&&RowId()!=99'>
+                              <span><i class='fas fa-edit'></i></span>
+                            </a>
+                            <a href='#' class='sale-control-btn' style='color:#222' data-bind='click:saveEditCategory, visible: IsEditing()'>
+                              <span><i class='fas fa-check-square'></i></span>
+                            </a>
+                            <a href='#' class='sale-control-btn' style='color:#222' data-bind='click:$root.removeCategory, visible:!IsEditing()&&RowId()!=99'>
+                              <span><i class='fas fa-trash-alt'></i></span>
+                            </a>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                    <hr>
+                    <form id='add-category-form'>
+                      <label for='new-category'>New Category</label>
+                      <div class="input-group mb-3">
+                        <input type='text' class='form-control' id='new-category-name' placeholder="Category Name" />
+                        <div class="input-group-append">
+                          <button class="btn btn-success" type="submit" id="add-category-btn" data-bind='click:addNewCategory'>
+                            <i class='fas fa-plus'></i> &nbsp; Add
+                          </button>
+                        </div>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- REASON MODAL -->
+            <div class='modal fade' id='reason-modal'>
+              <div class="modal-dialog modal-dialog-centered" role="document">
+                <div class="modal-content">
+                  <div class="modal-header" style='padding:1%'>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                      <span aria-hidden="true">&times;</span>
+                    </button>
+                  </div>
+                  <div class="modal-body">
+                    <form id='restock-form'>
+                      <div class='row'>
+                        <div class='col-md form-group' style='padding: 0% 5%'>
+                            <input type='hidden' id='reason-row-id' value=0 />
+
+                            <label for='change-reason'>Reason / Details</label>
+                            <textarea id='change-reason' class='form-control' rows=5 placeholder='Enter details / reason of change'></textarea>
+                          <br>
+                          <button type='button' class='btn btn-success form-control' id='confirm-reason-btn' data-bind='click:processInvChange'>OK</button>
                         </div>
                       </div>
                     </form>
@@ -317,15 +419,21 @@
             <!-- Search Product Form -->
             <form id='search-form'>
               <div class='row' style='padding-top: 1.5%'>
-                <div class='col-3 inventory-toolbar'>
+                <div class='col-5 inventory-toolbar'>
                   <button type='button' class='btn btn-dark' data-toggle='modal' data-target='#add-form-modal' aria-expanded="false" aria-controls='add-form-modal'>
                       <i class='fas fa-plus'></i> &nbsp; Add New Item
+                  </button>
+                  <button type='button' class='btn btn-dark' data-bind='click:openCategoryModal'>
+                      <i class='fas fa-tags'></i> &nbsp; Categories
                   </button>
                   <button type='button' class='btn btn-dark' data-bind='click:uploadInventoryFile'>
                       <i class='fas fa-upload'></i> &nbsp; Import File
                   </button>
+                  <button type='button' class='btn btn-dark' data-bind='click:exportInventoryFile'>
+                      <i class='fas fa-file-export'></i> &nbsp; Export File
+                  </button>
                 </div>
-                <div class='col-9 form-group'>
+                <div class='col-7 form-group'>
                   <div class="input-group mb-3">
                     <input type='text' class='form-control prod-search-bar' id='prod-search-bar' placeholder="Search in Products Table" />
                     <div class="input-group-append">
@@ -351,19 +459,15 @@
                     <th>Product Description</th>
                     <th>Unit Price</th>
                     <th>Available Qty</th>
-                    <th style='text-align: center' width=20%>Actions</th>
+                    <th style='text-align: center' width=15%>Actions</th>
                   </tr>
                 </thead>
                 <tbody id='item-table-tbody' class='table-tbody' data-bind='foreach:filterProducts'>
                   <tr data-bind="attr: {id:'table-row-'+RowId()}">
                     <td data-bind='text:ProdNum()'></td>
                     <td>
-                      <select class='form-control' data-bind='attr:{id:"pcat-"+RowId()}, value:Category(), enable:IsEnabled()'>
-                        <option value=1>Food</option>
-                        <option value=2>Beverages</option>
-                        <option value=3>Apparel</option>
-                        <option value=4>Personal</option>
-                        <option value=99>Misc</option>
+                      <select class='form-control' data-bind='attr:{id:"pcat-"+RowId()}, value:Category(), enable:IsEnabled(), foreach:$root.createCategories'>
+                        <option data-bind='value:RowId(), text:Name()'></option>
                       </select>
                     </td>
                     <td>
@@ -373,11 +477,25 @@
                       <input type='text' class='form-control' data-bind='attr:{value:parseFloat(ProdPrice()).toFixed(2), id:"pprice-"+RowId()}, enable:IsEnabled()' />
                     </td>
                     <td data-bind='text:ProdQty()'></td>
-                    <td width=15% style='text-align: center'>
-                      <button type='button' class='btn btn-dark edit-item-btn' data-bind='click:editRow, visible:!IsEnabled() && !IsRestock()'>Edit</button>
-                      <button type='button' class='btn btn-dark save-changes-btn' data-bind='click:saveEdit, visible:IsEnabled()'>Save</button>
-                      <button type='button' class='btn btn-dark restock-btn' data-bind='click:restockRow, visible:!IsEnabled() && !IsRestock()'>Restock</button>
-                      <button type='button' class='btn btn-dark cancel-changes-btn' data-bind='click:cancelAction, visible:IsEnabled() || IsRestock()'>Cancel</button>
+                    <td style='text-align: right'>
+                      <button type='button' class='btn btn-outline-success save-changes-btn' data-bind='click:$root.confirmEditProduct, visible:IsEnabled()' data-toggle='tooltip' title='Save'>
+                        <i class='fas fa-check'></i>
+                      </button>
+                      <button type='button' class='btn btn-outline-danger cancel-changes-btn' data-bind='click:cancelAction, visible:IsEnabled() || IsRestock()' data-toggle='tooltip' title='Cancel'>
+                        <i class='fas fa-times'></i>
+                      </button>
+                      <button type='button' class='btn btn-success restock-btn' data-bind='click:$root.restockRow, visible:!IsEnabled() && !IsRestock()' data-toggle='tooltip' title='Re-Stock'>
+                        <i class='fas fa-plus-circle'></i>
+                      </button>
+                      <button type='button' class='btn btn-danger restock-btn' data-bind='click:$root.unloadRow, visible:!IsEnabled() && !IsRestock()' data-toggle='tooltip' title='Unload'>
+                        <i class='fas fa-minus-circle'></i>
+                      </button>
+                      <button type='button' class='btn btn-dark edit-item-btn' data-bind='click:editRow, visible:!IsEnabled() && !IsRestock()' data-toggle='tooltip' title='Edit'>
+                        <i class='fas fa-edit'></i>
+                      </button>
+                      <button type='button' class='btn btn-warning discontinue-btn' data-bind='click:$root.confirmDiscontinue, visible:!IsEnabled() && !IsRestock()' data-toggle='tooltip' title='Discontinue'>
+                        <i class='fas fa-trash-alt'></i>
+                      </button>
                     </td>
                   </tr>
                 </tbody>
@@ -386,6 +504,86 @@
         </div>
         <!-- TRANSACTIONS TAB -->
         <div class="tab-pane fade" id="nav-txns" role="tabpanel" aria-labelledby="nav-txns-tab" data-bind='visible:currentUser()!=null&&currentUser().RoleId()!=2'>
+          <!-- Edit Transaction Modal -->
+          <div class='modal fade' id='edit-txn-modal'>
+            <div class="modal-dialog modal-lg" role="document" style='margin-top:2.5%'>
+              <div class="modal-content">
+                <div class="modal-header" style='padding:1%'>
+                  <h5>Edit Transaction Details</h5>
+                  <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                  </button>
+                </div>
+                <div class="modal-body">
+                  <table class='table table-hover'>
+                    <thead class='thead-dark'>
+                      <tr>
+                        <th width=20%>Qty</th>
+                        <th>Description</th>
+                        <th>Price</th>
+                        <th>Amount</th>
+                        <th width=20%>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody class='table-tbody' data-bind='foreach:txnRevisions'>
+                      <tr>
+                        <td data-bind='text:SaleQty()'></td>
+                        <td data-bind='text:ProdName()'></td>
+                        <td data-bind='text:parseFloat(UnitPrice).toFixed(2)'></td>
+                        <td data-bind='text:parseFloat(TotalAmount()).toFixed(2)'></td>
+                        <td>
+                          <a href='#' class='sale-control-btn' style='color:#222' data-bind='click:$root.subtractSaleQty'>
+                            <span><i class='fas fa-minus-circle'></i></span>
+                          </a>
+                          <a href='#' class='sale-control-btn' style='color:red' data-bind='click:$root.removeTxnRevision'>
+                            <span><i class='fas fa-times-circle'></i></span>
+                          </a>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <div class='row'>
+                    <div class='col'>
+                      <button type='button' class='btn btn-warning' data-bind='click:refundTxn'>Refund</button>
+                      <button type='button' class='btn btn-success' data-bind='click:confirmEditTxn'>Save</button>
+                      <button type='button' class='btn btn-secondary' data-bind='click:cancelEditTxn'>Cancel</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Supervisor Login Modal -->
+          <div class='modal fade' id='supervisor-login-modal'>
+            <div class="modal-dialog modal-dialog-centered" role="document">
+              <div class="modal-content">
+                <div class="modal-header" style='padding:1%'>
+                  <h5>Supervisor Login</h5>
+                  <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                  </button>
+                </div>
+                <div class="modal-body">
+                  <form id='supervisor-login-form'>
+                    <div class='row'>
+                        <div class='col-lg form-group'>
+                            <label for='login-username'>Username</label>
+                            <input type='text' id='login-username' class='form-control' placeholder='Enter username' autofocus required />
+        
+                            <label for='login-password'>Password</label>
+                            <input type='password' id='login-password' class='form-control' placeholder='Enter password' required />
+        
+                            <br>
+                            <input type='submit' class='btn btn-success form-control' id='login-btn' value='Confirm' />
+                        </div>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <form id='filter-txn-form'>
             <div class='row' style='padding-top: 1%'>
               <div class='col-md-2 form-group'>
@@ -479,6 +677,9 @@
                         <td>
                           <button type='button' class='btn btn-dark view-details-btn' data-bind='attr:{id:"table-row-"+RowId()}, click:selectTxnRow'>
                             <i class='fas fa-search'></i>
+                          </button>
+                          <button type='button' class='btn btn-dark view-details-btn' data-bind='attr:{id:"edit-txn-tr-"+RowId()}, click:$root.editTxnRow'>
+                            <i class='fas fa-edit'></i>
                           </button>
                         </td>
                       </tr>
@@ -857,7 +1058,7 @@
                       <td data-bind='text:UserName()'></td>
                       <td data-bind='text:RoleName()'></td>
                       <td>
-
+                        
                       </td>
                     </tr>
                   </tbody>

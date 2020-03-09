@@ -15,7 +15,7 @@ body {
 #sales-form input, #sales-form button, #sales-form select, #sales-search-btn, 
 #filter-txn-form .form-control, #myaccount-form .form-control, #add-user-form .form-control, 
 #submit-btn, .view-details-btn, .date-btn, #print-receipt-btn, .category-btn,
-.restock-btn, .edit-item-btn, .save-changes-btn, .cancel-changes-btn,
+.restock-btn, .edit-item-btn, .save-changes-btn, .cancel-changes-btn, .discontinue-btn,
 .inventory-toolbar button {
     font-size: 14px;
     line-height: 16px;
@@ -52,8 +52,12 @@ body {
     border: 1px solid #bbb;
 }
 
+.sale-control-btn {
+    font-size: 16px;
+}
+
 .form-control[disabled] {
-    background-color: white;
+    background-color: transparent;
     border: 0;
 }
 
@@ -64,7 +68,7 @@ select[disabled] {
     text-overflow: '';
 }
 
-.restock-btn, .edit-item-btn, .save-changes-btn, .cancel-changes-btn, .stock-ledger-btn, .category-btn {
+.restock-btn, .edit-item-btn, .save-changes-btn, .cancel-changes-btn, .stock-ledger-btn, .category-btn, .discontinue-btn {
     margin: 0.5%;
 }
 
