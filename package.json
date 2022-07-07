@@ -79,7 +79,7 @@
     "jquery.hotkeys": "^0.1.0",
     "js-datepicker": "^5.0.2",
     "knockout": "^3.5.0",
-    "moment": "^2.24.0",
+    "moment": "^2.29.4",
     "node-gyp": "^5.0.3",
     "node-notifier": "^6.0.0",
     "popper.js": "^1.15.0",
